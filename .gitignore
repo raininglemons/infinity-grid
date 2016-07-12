@@ -1,0 +1,14 @@
+.DS_STORE
+node_modules
+
+# IntelliJ project files
+.idea
+*.iml
+out
+gen
+.gitignore
+.idea/encodings.xml
+.idea/infinity-scroller.iml
+.idea/misc.xml
+.idea/modules.xml
+.idea/workspace.xml
