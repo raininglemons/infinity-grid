@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { consoleFactory } from 'console-factory';
+import consoleFactory from 'console-factory';
 
 const console = consoleFactory('InfinityScroller', 0);
 
