@@ -3,10 +3,9 @@ const gulp = require('gulp')
   , rename = require('gulp-rename');
 
 gulp.task('default', () => {
-  return gulp.src('infinity-scroller.js')
+  return gulp.src('./src/*.js')
     .pipe(babel({
       presets: ['es2015', 'react']
     }))
-    .pipe(rename("index.js"))
-    .pipe(gulp.dest('./'));
+    .pipe(gulp.dest('./dist'));
 });
