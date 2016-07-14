@@ -1,5 +1,5 @@
 {
-  "name": "infinity-scroller",
+  "name": "react-infinity-grid",
   "version": "0.0.1",
   "description": "WIP",
   "main": "index.js",
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/raininglemons/infinity-scroller.git"
+    "url": "git+https://github.com/raininglemons/infinity-grid.git"
   },
   "author": "Dom England",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/raininglemons/infinity-scroller/issues"
+    "url": "https://github.com/raininglemons/infinity-grid/issues"
   },
-  "homepage": "https://github.com/raininglemons/infinity-scroller#readme",
+  "homepage": "https://github.com/raininglemons/infinity-grid#readme",
   "devDependencies": {
     "babel-preset-es2015": "^6.9.0",
     "babel-preset-react": "^6.11.1",
