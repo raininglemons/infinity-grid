@@ -244,27 +244,31 @@ render(
 );
 /* */
 
-/* */
+/*
 render(
-  <InfinityGrid tolerance={500}>
+  <InfinityGrid tolerance={100}>
     {renderChildren()}
   </InfinityGrid>,
   document.getElementById('app')
 );
 /* */
 
-/*
+/* */
 render(
-  <div className="horizontal-infinite-scroll">
-    <InfinityGrid
-      tolerance={200}
-      mode='horizontal'
-      containerHeight={300}
-      scrollTarget='parent'
-      >
-      {renderChildren()}
-    </InfinityGrid>
-  </div>,
+  <div>
+    {new Array(10).fill(null).map((n, i) => {
+      return <div className="horizontal-infinite-scroll" key={i}>
+        <InfinityGrid
+          tolerance={200}
+          mode='horizontal'
+          containerHeight={300}
+          scrollTarget='parent'
+        >
+          {renderChildren()}
+        </InfinityGrid>
+      </div>;
+    })}
+    </div>,
 document.getElementById('app')
 );
 /* */
