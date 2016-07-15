@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "if-env NODE_ENV=production && npm run start:prod || npm run start:dev",
-    "start:dev": "webpack-dev-server --inline --content-base public/ --history-api-fallback --host 10.2.0.121 --port 8080",
+    "start:dev": "webpack-dev-server --inline --content-base public/ --history-api-fallback --port 8080",
     "start:prod": "npm run build && http-server -p 8080",
     "build:client": "NODE_ENV=\"production\" webpack",
     "build": "npm run build:client"

@@ -9,7 +9,7 @@ Pug.images = [{"src":"http://29.media.tumblr.com/tumblr_ltm9mro5E21qb08qmo1_500.
 
 
 function renderChildren(iOffset = 0) {
-  const columns = 6;
+  const columns = 4;
 
   const children = Pug.images.map((pug, i) => {
     const ratio = pug.height / pug.width;
