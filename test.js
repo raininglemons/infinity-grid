@@ -228,7 +228,7 @@ function renderChildren() {
     return width / 4;
   }
 
-  return [false, false, true].concat(new Array(50).fill(false)).map((isFeatured, i) => {
+  return [false, false, true].concat(new Array(5000).fill(false)).map((isFeatured, i) => {
     return <div key={i} className='item' height={isFeatured ? featured : normal} width={isFeatured ? featured : normal}>
       <p>#{i}</p>
     </div>

@@ -19,7 +19,7 @@ class InfinityGrid extends React.Component {
   componentWillReceiveProps(nextProps) {
     console.warn('nextProps', nextProps);
 
-    this.mapChildrenByKey(props.children);
+    this.mapChildrenByKey(nextProps.children);
 
     this.updateMetrics(nextProps);
   }
