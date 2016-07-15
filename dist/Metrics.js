@@ -115,7 +115,9 @@ var Metrics = function () {
     value: function removeItems(startItem) {
       var _this2 = this;
 
-      this.state.itemDefinitions.splice(startItem, this.state.itemDefinitions.length).forEach(function (item) {
+      var removedItems = this.state.itemDefinitions.splice(startItem, this.state.itemDefinitions.length);
+
+      removedItems.forEach(function (item) {
         delete _this2.state.itemsByKey[item.key];
       });
 
@@ -135,6 +137,8 @@ var Metrics = function () {
        */
       this.state.itemsByDepthStart = null;
       this.state.itemsByDepthEnd = null;
+
+      return removedItems;
     }
   }, {
     key: 'calculatePosition',

@@ -87,8 +87,9 @@ class Metrics {
   }
 
   removeItems(startItem) {
-    this.state.itemDefinitions.splice(startItem, this.state.itemDefinitions.length)
-      .forEach(item => {
+    const removedItems = this.state.itemDefinitions.splice(startItem, this.state.itemDefinitions.length);
+
+    removedItems.forEach(item => {
         delete this.state.itemsByKey[item.key];
       });
 
@@ -106,6 +107,8 @@ class Metrics {
      */
     this.state.itemsByDepthStart = null;
     this.state.itemsByDepthEnd = null;
+
+    return removedItems;
   }
 
   calculatePosition(item) {

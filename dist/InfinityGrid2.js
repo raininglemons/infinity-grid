@@ -44,6 +44,7 @@ var InfinityGrid = function (_React$Component) {
 
     _this.state = null;
     _this.metrics = new _Metrics2.default();
+    _this.endOfListCallbackFired = false;
 
     _this.mapChildrenByKey(props.children);
     return _this;
@@ -54,7 +55,7 @@ var InfinityGrid = function (_React$Component) {
     value: function componentWillReceiveProps(nextProps) {
       console.warn('nextProps', nextProps);
 
-      this.mapChildrenByKey(nextProps.children);
+      this.endOfListCallbackFired = false;
 
       this.updateMetrics(nextProps);
     }
@@ -206,6 +207,12 @@ var InfinityGrid = function (_React$Component) {
 
       state.childrenToRender = childrenToRender;
 
+      if (!this.endOfListCallbackFired && this.props.callback && state.childrenToRender[state.childrenToRender.length - 1] === this.props.children[this.props.children.length - 1].key) {
+        console.warn('Firing end of list callback');
+        this.endOfListCallbackFired = true;
+        setTimeout(this.props.callback, 0);
+      }
+
       this.setState(state);
     }
   }, {
@@ -235,7 +242,9 @@ var InfinityGrid = function (_React$Component) {
                   console.debug('Item ' + i + ' matches stored item');
                   return true;
                 } else {
-                  _this4.metrics.removeItems(i);
+                  _this4.metrics.removeItems(i).forEach(function (item) {
+                    return delete _this4.childrenMap[item.key];
+                  });
                   childrenInMetrics = i;
                 }
               } else {
@@ -244,6 +253,7 @@ var InfinityGrid = function (_React$Component) {
             }
 
             var item = _this4.metrics.addItem(child.key, handleDimension(child.props[breadthKey], state.containerSize), handleDimension(child.props[depthKey], state.containerSize));
+            _this4.childrenMap[child.key] = child;
             console.log('Added new child to metrics', item);
 
             return item.depthStart < state.containerEnd;
@@ -293,13 +303,16 @@ var InfinityGrid = function (_React$Component) {
     value: function getItemStyle(key) {
       var child = this.metrics.getItemByKey(key);
 
+      var left = child[this.state.leftKey];
+      var top = child[this.state.topKey];
+
       var style = {
         position: 'absolute',
         top: 0,
         left: 0,
         width: child[this.state.widthKey],
         height: child[this.state.heightKey],
-        transform: 'translateX(' + child[this.state.leftKey] + 'px) translateY(' + child[this.state.topKey] + 'px)'
+        transform: 'translateX(' + left + 'px) translateY(' + top + 'px)'
       };
 
       return style;
@@ -308,7 +321,9 @@ var InfinityGrid = function (_React$Component) {
     key: 'render',
     value: function render() {
       console.warn('Rendering', this.state !== null ? this.state.childrenToRender : null);
+
       var style = Object.assign(this.getWrapperStyle(), this.props.style);
+
       return _react2.default.createElement(
         'div',
         { className: this.props.className, style: style },
@@ -329,7 +344,8 @@ InfinityGrid.propTypes = {
   className: _react2.default.PropTypes.string,
   style: _react2.default.PropTypes.object,
   heightKey: _react2.default.PropTypes.string,
-  widthKey: _react2.default.PropTypes.string
+  widthKey: _react2.default.PropTypes.string,
+  callback: _react2.default.PropTypes.func
 };
 
 InfinityGrid.defaultProps = {
