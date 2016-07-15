@@ -54,7 +54,7 @@ var InfinityGrid = function (_React$Component) {
     value: function componentWillReceiveProps(nextProps) {
       console.warn('nextProps', nextProps);
 
-      this.mapChildrenByKey(props.children);
+      this.mapChildrenByKey(nextProps.children);
 
       this.updateMetrics(nextProps);
     }
@@ -108,8 +108,12 @@ var InfinityGrid = function (_React$Component) {
       var shouldUpdate = true;
 
       if (this.state !== null) {
-        console.log('Comparing children', this.state.childrenToRender, nextState.childrenToRender);
-        shouldUpdate = !shallowCompare(this.state.childrenToRender, nextState.childrenToRender);
+        if (this.state.containerSize !== nextState.containerSize) {
+          shouldUpdate = true;
+        } else {
+          console.log('Comparing children', this.state.childrenToRender, nextState.childrenToRender);
+          shouldUpdate = !shallowCompare(this.state.childrenToRender, nextState.childrenToRender);
+        }
       }
 
       return shouldUpdate;
@@ -201,9 +205,9 @@ var InfinityGrid = function (_React$Component) {
           children.every(function (child, i) {
             if (i < childrenInMetrics) {
               /* Only compare for differences on init of props */
-              if (init) {
-                var _item = _this4.metrics.getItem(i);
-                if (child.key === _item.key && child.props[breadthKey] === _item.breadth && child.props[depthKey] === _item.depth) {
+              var _item = _this4.metrics.getItem(i);
+              if (init || _this4.state.containerSize !== state.containerSize && (child.props[breadthKey] instanceof Function || child.props[depthKey] instanceof Function)) {
+                if (child.key === _item.key && handleDimension(child.props[breadthKey], state.containerSize) === _item.breadth && handleDimension(child.props[depthKey], state.containerSize) === _item.depth) {
                   console.debug('Item ' + i + ' matches stored item');
                   return true;
                 } else {
@@ -215,7 +219,7 @@ var InfinityGrid = function (_React$Component) {
               }
             }
 
-            var item = _this4.metrics.addItem(child.key, child.props[breadthKey], child.props[depthKey]);
+            var item = _this4.metrics.addItem(child.key, handleDimension(child.props[breadthKey], state.containerSize), handleDimension(child.props[depthKey], state.containerSize));
             console.log('Added new child to metrics', item);
 
             return item.depthStart < state.containerEnd;
@@ -338,6 +342,14 @@ function shallowCompare(one, two) {
     return one.every(function (val, i) {
       return val === two[i];
     });
+  }
+}
+
+function handleDimension(dimension, viewBreadth) {
+  if (dimension instanceof Function) {
+    return dimension(viewBreadth);
+  } else {
+    return dimension;
   }
 }
 
