@@ -1,0 +1,5 @@
+.item {
+    box-sizing: border-box;
+    border: solid #c0c0c0 2px;
+    background: #cccccc;
+}

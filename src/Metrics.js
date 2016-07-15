@@ -1,8 +1,8 @@
 'use strict';
 
 class Item {
-  constructor (ref, breadth, depth) {
-    this.ref = ref;
+  constructor (key, breadth, depth) {
+    this.key = key;
     this.breadth = breadth;
     this.depth = depth;
 
@@ -30,6 +30,7 @@ class Metrics {
 
     this.state.viewBreadth = viewBreadth;
     this.state.itemDefinitions = [];
+    this.state.itemsByKey = {};
     this.state.lowestDepth = 0;
   }
 
@@ -43,15 +44,13 @@ class Metrics {
       this.state.lowestDepth = 0;
 
       oldDefinitions.forEach(item => this.addItem(item));
-    } else {
-      this.state.viewBreadth = viewBreadth;
     }
   }
 
-  addItem(ref, breadth, depth) {
-    let item = ref;
+  addItem(key, breadth, depth) {
+    let item = key;
     if (breadth && depth) {
-      item = new Item(ref, breadth, depth);
+      item = new Item(key, breadth, depth);
     }
 
     /*
@@ -68,10 +67,15 @@ class Metrics {
     this.calculatePosition(item);
 
     this.state.itemDefinitions.push(item);
+
+    this.state.itemsByKey[item.key] = item;
   }
 
   removeItems(startItem) {
-    this.state.itemDefinitions.splice(startItem, this.state.itemDefinitions.length);
+    this.state.itemDefinitions.splice(startItem, this.state.itemDefinitions.length)
+      .forEach(item => {
+        delete this.state.itemsByKey[item.key];
+      });
 
     /*
     Update lowest item (used in estimating container size)
@@ -231,6 +235,10 @@ class Metrics {
 
   getItem(i) {
     return this.state.itemDefinitions[i] || null;
+  }
+
+  getItemByKey(key) {
+    return this.state.itemsByKey[key] || null;
   }
 
   getItems() {
