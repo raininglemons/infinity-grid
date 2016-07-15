@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from 'react-dom';
 
-import InfinityGrid from './src/InfinityGrid2';
+import InfinityGrid from './index';
 
 const props = [
   [300, 300],
