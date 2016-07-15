@@ -3,3 +3,4 @@
     border: solid #c0c0c0 2px;
     background: #cccccc;
 }
+html{-webkit-overflow-scrolling:touch}body{font-family:Helvetica,Arial,sans-serif;color:#333}body p{font-weight:300;line-height:30px;vertical-align:baseline}.horizontal-infinite-scroll{width:100%;overflow:auto;-webkit-overflow-scrolling:touch}

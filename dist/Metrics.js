@@ -9,10 +9,10 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var Item = function () {
-  function Item(ref, breadth, depth) {
+  function Item(key, breadth, depth) {
     _classCallCheck(this, Item);
 
-    this.ref = ref;
+    this.key = key;
     this.breadth = breadth;
     this.depth = depth;
 
@@ -48,7 +48,10 @@ var Metrics = function () {
 
     this.state.viewBreadth = viewBreadth;
     this.state.itemDefinitions = [];
+    this.state.itemsByKey = {};
     this.state.lowestDepth = 0;
+    this.state.itemsByDepthStart = null;
+    this.state.itemsByDepthEnd = null;
   }
 
   _createClass(Metrics, [{
@@ -67,16 +70,14 @@ var Metrics = function () {
         oldDefinitions.forEach(function (item) {
           return _this.addItem(item);
         });
-      } else {
-        this.state.viewBreadth = viewBreadth;
       }
     }
   }, {
     key: 'addItem',
-    value: function addItem(ref, breadth, depth) {
-      var item = ref;
+    value: function addItem(key, breadth, depth) {
+      var item = key;
       if (breadth && depth) {
-        item = new Item(ref, breadth, depth);
+        item = new Item(key, breadth, depth);
       }
 
       /*
@@ -93,11 +94,30 @@ var Metrics = function () {
       this.calculatePosition(item);
 
       this.state.itemDefinitions.push(item);
+
+      this.state.itemsByKey[item.key] = item;
+
+      /*
+       Empty cached sort indexes
+       */
+      if (this.state.itemsByDepthStart) {
+        this.state.itemsByDepthStart = null;
+      }
+
+      if (this.state.itemsByDepthEnd) {
+        this.state.itemsByDepthEnd = null;
+      }
+
+      return item;
     }
   }, {
     key: 'removeItems',
     value: function removeItems(startItem) {
-      this.state.itemDefinitions.splice(startItem, this.state.itemDefinitions.length);
+      var _this2 = this;
+
+      this.state.itemDefinitions.splice(startItem, this.state.itemDefinitions.length).forEach(function (item) {
+        delete _this2.state.itemsByKey[item.key];
+      });
 
       /*
       Update lowest item (used in estimating container size)
@@ -109,28 +129,34 @@ var Metrics = function () {
       } else {
         this.state.lowestDepth = 0;
       }
+
+      /*
+      Empty cached sort indexes
+       */
+      this.state.itemsByDepthStart = null;
+      this.state.itemsByDepthEnd = null;
     }
   }, {
     key: 'calculatePosition',
     value: function calculatePosition(item) {
-      var _this2 = this;
+      var _this3 = this;
 
-      //console.log(`Item #${this.getItems().length}:`);
+      // console.log(`Item #${this.getItems().length}:`);
 
       var itemConfigurations = this.getClosestBreadths(item.breadth).reverse().map(function (breadthStart) {
         return {
           breadthStart: breadthStart,
-          depthStart: _this2.getClosestDepth(breadthStart, breadthStart + item.breadth)
+          depthStart: _this3.getClosestDepth(breadthStart, breadthStart + item.breadth)
         };
       }).sort(function (a, b) {
         if (a.depthStart !== b.depthStart) {
-          return a.depthStart > b.depthStart;
+          return a.depthStart - b.depthStart;
         } else {
-          return a.breadthStart > b.breadthStart;
+          return a.breadthStart - b.breadthStart;
         }
       });
 
-      //itemConfigurations.forEach(conf => console.log(' ', conf));
+      // itemConfigurations.forEach(conf => console.log(' ', conf));
 
       item.setBreadthOffset(itemConfigurations[0].breadthStart);
       item.setDepthOffset(itemConfigurations[0].depthStart);
@@ -157,7 +183,7 @@ var Metrics = function () {
 
         breadthOffset.push(initialOffset);
 
-        // console.log(` - initial offset ${initialOffset}`);
+        //console.log(` - initial offset ${initialOffset}`);
         if (initialOffset !== 0) {
           /*
            Set pointer back to first item that has a breadth offset higher or
@@ -169,6 +195,10 @@ var Metrics = function () {
               break;
             }
           }
+        }
+
+        for (var ii = 0; ii < initialOffset; ii += breadth) {
+          breadthOffset.push(ii);
         }
 
         if (i >= 0) {
@@ -184,7 +214,7 @@ var Metrics = function () {
               }
             } else {
               // console.log(`  - yep #${predecessor.ref}`, predecessor.breadthStart + breadth <= this.state.viewBreadth);
-              if (predecessor.breadthStart + breadth <= this.state.viewBreadth) {
+              if (predecessor.breadthStart + breadth <= this.state.viewBreadth && breadthOffset.indexOf(predecessor.breadthStart) === -1) {
                 breadthOffset.push(predecessor.breadthStart);
               }
             }
@@ -194,6 +224,8 @@ var Metrics = function () {
       } else {
         breadthOffset.push(0);
       }
+
+      //console.log(breadthOffset);
 
       return breadthOffset;
     }
@@ -268,9 +300,46 @@ var Metrics = function () {
       return this.state.itemDefinitions[i] || null;
     }
   }, {
+    key: 'getItemByKey',
+    value: function getItemByKey(key) {
+      return this.state.itemsByKey[key] || null;
+    }
+  }, {
     key: 'getItems',
     value: function getItems() {
       return this.state.itemDefinitions;
+    }
+  }, {
+    key: 'getItemsByDepthStart',
+    value: function getItemsByDepthStart() {
+      if (this.state.itemsByDepthStart === null) {
+        this.sortItemsByDepthStart(this.state.itemDefinitions);
+      }
+
+      return this.state.itemsByDepthStart;
+    }
+  }, {
+    key: 'getItemsByDepthEnd',
+    value: function getItemsByDepthEnd() {
+      if (this.state.itemsByDepthEnd === null) {
+        this.sortItemsByDepthEnd(this.state.itemDefinitions);
+      }
+
+      return this.state.itemsByDepthEnd;
+    }
+  }, {
+    key: 'sortItemsByDepthStart',
+    value: function sortItemsByDepthStart(items) {
+      this.state.itemsByDepthStart = items.sort(function (a, b) {
+        return a.depthStart - b.depthStart;
+      });
+    }
+  }, {
+    key: 'sortItemsByDepthEnd',
+    value: function sortItemsByDepthEnd(items) {
+      this.state.itemsByDepthEnd = items.sort(function (a, b) {
+        return a.depthEnd - b.depthEnd;
+      });
     }
   }]);
 
@@ -279,7 +348,7 @@ var Metrics = function () {
 
 /*
 console.time('init');
-const test = new Test(300);
+const test = new Metrics(300);
 
 let i = 0;
 
@@ -298,6 +367,9 @@ test.addItem(i++, 100, 100);
 
 test.addItem(i++, 300, 20);
 
+console.log(test.getItemsByDepthEnd());
+
+/*
 for (; i < 1000;) { test.addItem(i++, 100, 100); }
 
 console.timeEnd('init');

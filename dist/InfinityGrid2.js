@@ -30,7 +30,7 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var console = (0, _consoleFactory2.default)('InfinityGrid', 1);
+var console = (0, _consoleFactory2.default)('InfinityGrid', 0);
 
 var InfinityGrid = function (_React$Component) {
   _inherits(InfinityGrid, _React$Component);
@@ -43,8 +43,9 @@ var InfinityGrid = function (_React$Component) {
     var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(InfinityGrid).call(this, props, context));
 
     _this.state = null;
-    _this._childrenToRender = [];
     _this.metrics = new _Metrics2.default();
+
+    _this.mapChildrenByKey(props.children);
     return _this;
   }
 
@@ -53,12 +54,25 @@ var InfinityGrid = function (_React$Component) {
     value: function componentWillReceiveProps(nextProps) {
       console.warn('nextProps', nextProps);
 
-      this.loadChildrenIntoMetrics(this.props.children, true);
+      this.mapChildrenByKey(props.children);
+
+      this.updateMetrics(nextProps);
+    }
+  }, {
+    key: 'mapChildrenByKey',
+    value: function mapChildrenByKey(children) {
+      var _this2 = this;
+
+      this.childrenMap = {};
+
+      children.forEach(function (child) {
+        return _this2.childrenMap[child.key] = child;
+      });
     }
   }, {
     key: 'componentDidMount',
     value: function componentDidMount() {
-      var _this2 = this;
+      var _this3 = this;
 
       console.debug('componentDidMount', this.props.children.length);
 
@@ -75,7 +89,7 @@ var InfinityGrid = function (_React$Component) {
        Add window scroll and resize listeners
        */
       this.boundUpdateMetrics = function () {
-        return _this2.updateMetrics();
+        return _this3.updateMetrics();
       };
       this.scrollTarget.addEventListener('scroll', this.boundUpdateMetrics);
       this.scrollTarget.addEventListener('resize', this.boundUpdateMetrics);
@@ -86,116 +100,100 @@ var InfinityGrid = function (_React$Component) {
       /*
        Populate state
        */
-      this.updateMetrics();
+      this.updateMetrics(this.props, true);
     }
   }, {
     key: 'shouldComponentUpdate',
     value: function shouldComponentUpdate(nextProps, nextState) {
-      /*
-      Work out which children will be rendered in the next view now. Compare
-      against the previously rendered children, if theres no change, do nothing
-       */
-      this.loadChildrenIntoMetrics();
-      var children = this.childrenToRender();
+      var shouldUpdate = true;
 
-      /*
-      Let's cheat somewhat to save time, if the first and last child match,
-      assume we're fine
-       */
-      if (this._childrenToRender.length !== children.length || children.length === 0) {
-        this._childrenToRender = children;
-        return true;
+      if (this.state !== null) {
+        console.log('Comparing children', this.state.childrenToRender, nextState.childrenToRender);
+        shouldUpdate = !shallowCompare(this.state.childrenToRender, nextState.childrenToRender);
       }
 
-      if (this._childrenToRender[0].key !== children[0].key) {
-        this._childrenToRender = children;
-        return true;
-      }
-
-      if (this._childrenToRender[this._childrenToRender.length - 1].key !== children[children.length - 1].key) {
-        this._childrenToRender = children;
-        return true;
-      }
-
-      console.warn('BLOCKING RENDER');
-
-      return false;
+      return shouldUpdate;
     }
   }, {
-    key: 'componentWillUnmount',
-    value: function componentWillUnmount() {
-      console.debug('componentWillUnmount');
+    key: 'updateMetrics',
+    value: function updateMetrics(props) {
+      console.warn('updateMetrics - called');
+      props = props || this.props;
 
-      /*
-       Remember offset of scroll window (if not document window)
-       */
-      if (this.scrollTarget !== window) {
-        this.containerOffset = {
-          top: this.scrollTarget.scrollTop,
-          left: this.scrollTarget.scrollLeft
+      var info = this.el.getBoundingClientRect();
+
+      var isHorizontal = props.mode === 'horizontal';
+
+      var state = null;
+
+      if (isHorizontal) {
+        state = {
+          isHorizontal: true,
+          containerSize: props.containerHeight || info.height,
+          containerOffset: info.left,
+          viewSize: window.innerWidth,
+          widthKey: 'depth',
+          heightKey: 'breadth',
+          leftKey: 'depthStart',
+          topKey: 'breadthStart'
         };
-        console.warn('containerOffset stored', this.containerOffset);
+      } else {
+        state = {
+          isHorizontal: false,
+          containerSize: info.width,
+          containerOffset: info.top,
+          viewSize: window.innerHeight,
+          widthKey: 'breadth',
+          heightKey: 'depth',
+          leftKey: 'breadthStart',
+          topKey: 'depthStart'
+        };
       }
+      state.containerStart = state.containerOffset * -1 - this.props.tolerance;
+      state.containerEnd = state.containerStart + state.viewSize + this.props.tolerance * 2;
 
-      /*
-       Clean up
-       */
-      this.state = null;
+      /* Update view size if changed */
+      this.metrics.setViewBreadth(state.containerSize);
 
-      /*
-       Remove event listeners
-       */
-      this.scrollTarget.removeEventListener('scroll', this.boundUpdateMetrics);
-      this.scrollTarget.removeEventListener('resize', this.boundUpdateMetrics);
-      if (this.scrollTarget !== window) {
-        window.addEventListener('resize', this.boundUpdateMetrics);
-      }
+      /* Load any new children, or children that haven't yet been processed that could now be in view */
+      this.loadChildrenIntoMetrics(state, props.children, this.props !== props);
 
-      /*
-       Remove references, free up some memory
-       */
-      this.el = null;
-      this.boundUpdateMetrics = null;
-    }
-  }, {
-    key: 'getChildren',
-    value: function getChildren() {
-      var _this3 = this;
-
-      return this._childrenToRender.map(function (child) {
-        return _react2.default.cloneElement(child, { style: _this3.getItemStyle(child.key) });
+      /* Get the keys of children that should be in view */
+      var childrenToRender = [];
+      var exceeded = null;
+      this.metrics.getItems().every(function (item) {
+        if (item.depthEnd > state.containerStart) {
+          if (item.depthStart < state.containerEnd) {
+            childrenToRender.push(item.key);
+          } else {
+            if (exceeded = null) {
+              exceeded = item.breadthStart;
+            } else if (item.breadthStart <= exceeded) {
+              return false;
+            }
+          }
+        }
+        return true;
       });
-    }
-  }, {
-    key: 'getItemStyle',
-    value: function getItemStyle(key) {
-      var child = this.metrics.getItemByKey(key);
 
-      var style = {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: child[this.state.widthKey],
-        height: child[this.state.heightKey],
-        transform: 'translateX(' + child[this.state.leftKey] + 'px) translateY(' + child[this.state.topKey] + 'px)'
-      };
+      state.childrenToRender = childrenToRender;
 
-      return style;
+      this.setState(state);
     }
   }, {
     key: 'loadChildrenIntoMetrics',
-    value: function loadChildrenIntoMetrics(children) {
+    value: function loadChildrenIntoMetrics(state, children) {
       var _this4 = this;
 
-      var init = arguments.length <= 1 || arguments[1] === undefined ? false : arguments[1];
+      var init = arguments.length <= 2 || arguments[2] === undefined ? false : arguments[2];
 
       children = children || this.props.children;
       console.warn('loadChildrenIntoMetrics - called');
 
-      var breadthKey = this.props.mode === 'horizontal' ? 'height' : 'width';
-      var depthKey = this.props.mode === 'horizontal' ? 'width' : 'height';
+      var breadthKey = state.isHorizontal ? 'height' : 'width';
+      var depthKey = state.isHorizontal ? 'width' : 'height';
 
-      if (children !== null && this.state !== null) {
+      if (children !== null && state !== null) {
         (function () {
           /* Only add children that don't already exist */
           var childrenInMetrics = _this4.metrics.getItems().length;
@@ -220,7 +218,7 @@ var InfinityGrid = function (_React$Component) {
             var item = _this4.metrics.addItem(child.key, child.props[breadthKey], child.props[depthKey]);
             console.log('Added new child to metrics', item);
 
-            return item.depthStart < _this4.state.containerEnd;
+            return item.depthStart < state.containerEnd;
           });
 
           console.debug('Updated metrics object', _this4.metrics);
@@ -228,90 +226,19 @@ var InfinityGrid = function (_React$Component) {
       }
     }
   }, {
-    key: 'updateMetrics',
-    value: function updateMetrics(props) {
+    key: 'getChildren',
+    value: function getChildren() {
       var _this5 = this;
 
-      console.warn('updateMetrics - called');
-      props = props || this.props;
-
-      var info = this.el.getBoundingClientRect();
-
-      console.log(info);
-
-      var isHorizontal = props.mode === 'horizontal';
-
-      var state = null;
-
-      if (isHorizontal) {
-        state = {
-          isHorizontal: true,
-          containerSize: info.height,
-          containerOffset: info.left,
-          viewSize: window.innerWidth,
-          widthKey: 'depth',
-          heightKey: 'breadth',
-          leftKey: 'depthStart',
-          topKey: 'breadthStart'
-        };
-      } else {
-        state = {
-          isHorizontal: false,
-          containerSize: info.width,
-          containerOffset: info.top,
-          viewSize: window.innerHeight,
-          widthKey: 'breadth',
-          heightKey: 'depth',
-          leftKey: 'breadthStart',
-          topKey: 'depthStart'
-        };
-      }
-      state.containerStart = state.containerOffset * -1 - this.props.tolerance;
-      state.containerEnd = state.containerStart + state.viewSize + this.props.tolerance * 2;
-
-      var stateChanged = this.state === null || Object.keys(state).some(function (key) {
-        return _this5.state[key] !== state[key];
-      });
-
-      console.debug('State changed?', stateChanged, state);
-
-      if (stateChanged) {
-        this.metrics.setViewBreadth(state.containerSize);
-        this.setState(state);
-      }
-    }
-  }, {
-    key: 'convertDimensionToString',
-    value: function convertDimensionToString(dimension, context) {
-      console.log(dimension, context);
-      if (typeof dimension === 'string') {
-        var regexMatch = null;
-        if ((regexMatch = dimension.match(/([0-9]+)%/)) !== null) {
-          console.warn('itemBreadth is percentage', regexMatch);
-          return parseFloat(regexMatch[0]) / 100 * context;
-        } else {
-          console.log('itemBreadth is number');
-          return parseFloat(dimension);
-        }
-      } else if (dimension instanceof Function) {
-        return parseFloat(dimension(context));
-      }
-      /* Anything else, try and cast as float */
-      return parseFloat(dimension);
-    }
-  }, {
-    key: 'childrenToRender',
-    value: function childrenToRender() {
-      var _this6 = this;
+      var children = [];
 
       if (this.state !== null) {
-        return this.props.children.filter(function (child, i) {
-          var item = _this6.metrics.getItem(i);
-          return item && item.depthStart < _this6.state.containerEnd && item.depthEnd > _this6.state.containerStart;
+        children = this.state.childrenToRender.map(function (key) {
+          return _react2.default.cloneElement(_this5.childrenMap[key], { style: _this5.getItemStyle(key) });
         });
-      } else {
-        return [];
       }
+
+      return children;
     }
   }, {
     key: 'getWrapperStyle',
@@ -334,9 +261,25 @@ var InfinityGrid = function (_React$Component) {
       return style;
     }
   }, {
+    key: 'getItemStyle',
+    value: function getItemStyle(key) {
+      var child = this.metrics.getItemByKey(key);
+
+      var style = {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: child[this.state.widthKey],
+        height: child[this.state.heightKey],
+        transform: 'translateX(' + child[this.state.leftKey] + 'px) translateY(' + child[this.state.topKey] + 'px)'
+      };
+
+      return style;
+    }
+  }, {
     key: 'render',
     value: function render() {
-      console.debug('render', this);
+      console.warn('Rendering', this.state !== null ? this.state.childrenToRender : null);
       var style = Object.assign(this.getWrapperStyle(), this.props.style);
       return _react2.default.createElement(
         'div',
@@ -351,8 +294,6 @@ var InfinityGrid = function (_React$Component) {
 
 InfinityGrid.propTypes = {
   mode: _react2.default.PropTypes.string,
-  itemWidth: _react2.default.PropTypes.any,
-  itemHeight: _react2.default.PropTypes.any,
   tolerance: _react2.default.PropTypes.number,
   children: _react2.default.PropTypes.array,
   scrollTarget: _react2.default.PropTypes.any,
@@ -365,7 +306,7 @@ InfinityGrid.propTypes = {
 
 InfinityGrid.defaultProps = {
   mode: 'vertical',
-  tolerance: 200,
+  tolerance: 100,
   children: [],
   scrollTarget: window,
   className: 'infinity-grid',

@@ -32,6 +32,8 @@ class Metrics {
     this.state.itemDefinitions = [];
     this.state.itemsByKey = {};
     this.state.lowestDepth = 0;
+    this.state.itemsByDepthStart = null;
+    this.state.itemsByDepthEnd = null;
   }
 
   setViewBreadth(viewBreadth) {
@@ -69,6 +71,19 @@ class Metrics {
     this.state.itemDefinitions.push(item);
 
     this.state.itemsByKey[item.key] = item;
+
+    /*
+     Empty cached sort indexes
+     */
+    if (this.state.itemsByDepthStart) {
+      this.state.itemsByDepthStart = null;
+    }
+
+    if (this.state.itemsByDepthEnd) {
+      this.state.itemsByDepthEnd = null;
+    }
+
+    return item;
   }
 
   removeItems(startItem) {
@@ -85,10 +100,16 @@ class Metrics {
     } else {
       this.state.lowestDepth = 0;
     }
+
+    /*
+    Empty cached sort indexes
+     */
+    this.state.itemsByDepthStart = null;
+    this.state.itemsByDepthEnd = null;
   }
 
   calculatePosition(item) {
-    //console.log(`Item #${this.getItems().length}:`);
+    // console.log(`Item #${this.getItems().length}:`);
 
     const itemConfigurations = this.getClosestBreadths(item.breadth)
       .reverse()
@@ -98,13 +119,13 @@ class Metrics {
       }))
       .sort((a, b) => {
         if (a.depthStart !== b.depthStart) {
-          return a.depthStart > b.depthStart;
+          return a.depthStart - b.depthStart;
         } else {
-          return a.breadthStart > b.breadthStart;
+          return a.breadthStart - b.breadthStart;
         }
       });
 
-    //itemConfigurations.forEach(conf => console.log(' ', conf));
+    // itemConfigurations.forEach(conf => console.log(' ', conf));
 
     item.setBreadthOffset(itemConfigurations[0].breadthStart);
     item.setDepthOffset(itemConfigurations[0].depthStart);
@@ -130,7 +151,7 @@ class Metrics {
 
       breadthOffset.push(initialOffset);
 
-      // console.log(` - initial offset ${initialOffset}`);
+      //console.log(` - initial offset ${initialOffset}`);
       if (initialOffset !== 0) {
         /*
          Set pointer back to first item that has a breadth offset higher or
@@ -142,6 +163,10 @@ class Metrics {
             break;
           }
         }
+      }
+
+      for (let ii = 0; ii < initialOffset; ii += breadth) {
+        breadthOffset.push(ii);
       }
 
       if (i >= 0) {
@@ -157,7 +182,7 @@ class Metrics {
             }
           } else {
             // console.log(`  - yep #${predecessor.ref}`, predecessor.breadthStart + breadth <= this.state.viewBreadth);
-            if (predecessor.breadthStart + breadth <= this.state.viewBreadth) {
+            if (predecessor.breadthStart + breadth <= this.state.viewBreadth && breadthOffset.indexOf(predecessor.breadthStart) === -1) {
               breadthOffset.push(predecessor.breadthStart);
             }
           }
@@ -167,6 +192,8 @@ class Metrics {
     } else {
       breadthOffset.push(0);
     }
+
+    //console.log(breadthOffset);
 
     return breadthOffset;
   }
@@ -244,11 +271,35 @@ class Metrics {
   getItems() {
     return this.state.itemDefinitions;
   }
+
+  getItemsByDepthStart() {
+    if (this.state.itemsByDepthStart === null) {
+      this.sortItemsByDepthStart(this.state.itemDefinitions);
+    }
+
+    return this.state.itemsByDepthStart;
+  }
+
+  getItemsByDepthEnd() {
+    if (this.state.itemsByDepthEnd === null) {
+      this.sortItemsByDepthEnd(this.state.itemDefinitions);
+    }
+
+    return this.state.itemsByDepthEnd;
+  }
+
+  sortItemsByDepthStart(items) {
+    this.state.itemsByDepthStart = items.sort((a, b) => a.depthStart - b.depthStart);
+  }
+
+  sortItemsByDepthEnd(items) {
+    this.state.itemsByDepthEnd = items.sort((a, b) => a.depthEnd - b.depthEnd);
+  }
 }
 
 /*
 console.time('init');
-const test = new Test(300);
+const test = new Metrics(300);
 
 let i = 0;
 
@@ -267,6 +318,9 @@ test.addItem(i++, 100, 100);
 
 test.addItem(i++, 300, 20);
 
+console.log(test.getItemsByDepthEnd());
+
+/*
 for (; i < 1000;) { test.addItem(i++, 100, 100); }
 
 console.timeEnd('init');
