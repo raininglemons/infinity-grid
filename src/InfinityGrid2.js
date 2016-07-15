@@ -57,6 +57,28 @@ class InfinityGrid extends React.Component {
      */
     this.updateMetrics(this.props, true);
   }
+  componentWillUnmount() {
+    console.debug('componentWillUnmount');
+
+    /*
+     Clean up
+     */
+    this.state = null;
+
+    /*
+     Remove event listeners
+     */
+    this.scrollTarget.removeEventListener('scroll', this.boundUpdateMetrics);
+    this.scrollTarget.removeEventListener('resize', this.boundUpdateMetrics);
+    if (this.scrollTarget !== window) {
+      window.addEventListener('resize', this.boundUpdateMetrics);
+    }
+
+    /*
+     Remove references, free up some memory
+     */
+    this.el = null;
+  }
 
 
   shouldComponentUpdate(nextProps, nextState) {

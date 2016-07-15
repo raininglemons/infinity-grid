@@ -103,6 +103,30 @@ var InfinityGrid = function (_React$Component) {
       this.updateMetrics(this.props, true);
     }
   }, {
+    key: 'componentWillUnmount',
+    value: function componentWillUnmount() {
+      console.debug('componentWillUnmount');
+
+      /*
+       Clean up
+       */
+      this.state = null;
+
+      /*
+       Remove event listeners
+       */
+      this.scrollTarget.removeEventListener('scroll', this.boundUpdateMetrics);
+      this.scrollTarget.removeEventListener('resize', this.boundUpdateMetrics);
+      if (this.scrollTarget !== window) {
+        window.addEventListener('resize', this.boundUpdateMetrics);
+      }
+
+      /*
+       Remove references, free up some memory
+       */
+      this.el = null;
+    }
+  }, {
     key: 'shouldComponentUpdate',
     value: function shouldComponentUpdate(nextProps, nextState) {
       var shouldUpdate = true;
