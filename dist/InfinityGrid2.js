@@ -118,7 +118,7 @@ var InfinityGrid = function (_React$Component) {
       this.scrollTarget.removeEventListener('scroll', this.boundUpdateMetrics);
       this.scrollTarget.removeEventListener('resize', this.boundUpdateMetrics);
       if (this.scrollTarget !== window) {
-        window.addEventListener('resize', this.boundUpdateMetrics);
+        window.removeEventListener('resize', this.boundUpdateMetrics);
       }
 
       /*
