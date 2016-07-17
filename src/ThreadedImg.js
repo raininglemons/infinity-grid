@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import consoleFactory from 'console-factory';
 import Metrics from './Metrics';
 
-const console = consoleFactory('ThreadedImg', 0);
+const console = consoleFactory('ThreadedImg', 3);
 
 const ref = new WeakMap;
 
@@ -11,7 +11,7 @@ function workerFn() {
   self.onmessage = function (e) {
     const url = e.data;
     const onload = () => {
-        self.postMessage(/*xhr.response*/true);
+        self.postMessage(xhr.response);
         self.close();
     };
 
@@ -43,9 +43,9 @@ class ThreadedImg extends React.Component {
     worker.onmessage = (e) => {
       console.log('worker resp', e.data);
       let blob = null;
-      /*if (e.data) {
+      if (e.data) {
         blob = URL.createObjectURL(e.data);
-      }*/
+      }
       this.setState({ loaded: true, blob });
     };
   }
@@ -60,6 +60,7 @@ class ThreadedImg extends React.Component {
       }
       return <img {...props} data-loading={false}/>
     } else {
+      delete props.src;
       return <img {...props} data-loading={true} />
     }
   }

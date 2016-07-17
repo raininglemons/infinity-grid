@@ -32,7 +32,7 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var console = (0, _consoleFactory2.default)('ThreadedImg', 0);
+var console = (0, _consoleFactory2.default)('ThreadedImg', 3);
 
 var ref = new WeakMap();
 
@@ -40,7 +40,7 @@ function workerFn() {
   self.onmessage = function (e) {
     var url = e.data;
     var onload = function onload() {
-      self.postMessage( /*xhr.response*/true);
+      self.postMessage(xhr.response);
       self.close();
     };
 
@@ -78,9 +78,9 @@ var ThreadedImg = function (_React$Component) {
     worker.onmessage = function (e) {
       console.log('worker resp', e.data);
       var blob = null;
-      /*if (e.data) {
+      if (e.data) {
         blob = URL.createObjectURL(e.data);
-      }*/
+      }
       _this.setState({ loaded: true, blob: blob });
     };
     return _this;
@@ -98,6 +98,7 @@ var ThreadedImg = function (_React$Component) {
         }
         return _react2.default.createElement('img', _extends({}, props, { 'data-loading': false }));
       } else {
+        delete props.src;
         return _react2.default.createElement('img', _extends({}, props, { 'data-loading': true }));
       }
     }

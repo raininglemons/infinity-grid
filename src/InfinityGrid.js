@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import consoleFactory from 'console-factory';
 import Metrics from './Metrics';
 
-const console = consoleFactory('InfinityGrid', 1);
+const console = consoleFactory('InfinityGrid', 0);
 
 class InfinityGrid extends React.Component {
   constructor(props, context) {
@@ -11,14 +11,28 @@ class InfinityGrid extends React.Component {
     super(props, context);
 
     this.state = null;
-    this._childrenToRender = [];
     this.metrics = new Metrics();
+    this.endOfListCallbackFired = false;
+    this.childrenMap = {};
+
+    this.rafHandle = null;
+    this.idleHandle = null;
   }
 
   componentWillReceiveProps(nextProps) {
     console.warn('nextProps', nextProps);
 
-    this.loadChildrenIntoMetrics(this.props.children, true);
+    this.endOfListCallbackFired = false;
+
+    this.updateMetrics(nextProps);
+
+    /*
+     If browser supports requestIdleCallback, continue to process remaining items
+     in idle time
+     */
+    if (window.requestIdleCallback) {
+      this.idleHandle = requestIdleCallback(this.loadChildrenWhenIdle.bind(this));
+    }
   }
 
   componentDidMount() {
@@ -36,7 +50,13 @@ class InfinityGrid extends React.Component {
     /*
      Add window scroll and resize listeners
      */
-    this.boundUpdateMetrics = () => this.updateMetrics();
+    const metricsFn = () => this.updateMetrics();
+
+    /*
+    Only request an animation frame if one is not already pending
+     */
+    this.boundUpdateMetrics = () => !this.rafHandle && (this.rafHandle = requestAnimationFrame(metricsFn));
+
     this.scrollTarget.addEventListener('scroll', this.boundUpdateMetrics);
     this.scrollTarget.addEventListener('resize', this.boundUpdateMetrics);
     if (this.scrollTarget !== window) {
@@ -46,54 +66,19 @@ class InfinityGrid extends React.Component {
     /*
      Populate state
      */
-    this.updateMetrics();
-  }
-
-  shouldComponentUpdate(nextProps, nextState) {
-    /*
-    Work out which children will be rendered in the next view now. Compare
-    against the previously rendered children, if theres no change, do nothing
-     */
-    this.loadChildrenIntoMetrics();
-    const children = this.childrenToRender();
+    this.updateMetrics(this.props, true);
 
     /*
-    Let's cheat somewhat to save time, if the first and last child match,
-    assume we're fine
+    If browser supports requestIdleCallback and requestIdleCallback isn't already
+    queued up queue it...
      */
-    if (this._childrenToRender.length !== children.length || children.length === 0) {
-      this._childrenToRender = children;
-      return true;
+    if (!this.idleHandle && window.requestIdleCallback) {
+      this.idleHandle = requestIdleCallback(this.loadChildrenWhenIdle.bind(this));
     }
-
-    if (this._childrenToRender[0].key !== children[0].key) {
-      this._childrenToRender = children;
-      return true;
-    }
-
-    if (this._childrenToRender[this._childrenToRender.length - 1].key !== children[children.length - 1].key) {
-      this._childrenToRender = children;
-      return true;
-    }
-
-    console.warn('BLOCKING RENDER');
-
-    return false;
   }
 
   componentWillUnmount() {
     console.debug('componentWillUnmount');
-
-    /*
-     Remember offset of scroll window (if not document window)
-     */
-    if (this.scrollTarget !== window) {
-      this.containerOffset = {
-        top: this.scrollTarget.scrollTop,
-        left: this.scrollTarget.scrollLeft,
-      };
-      console.warn('containerOffset stored', this.containerOffset);
-    }
 
     /*
      Clean up
@@ -106,75 +91,28 @@ class InfinityGrid extends React.Component {
     this.scrollTarget.removeEventListener('scroll', this.boundUpdateMetrics);
     this.scrollTarget.removeEventListener('resize', this.boundUpdateMetrics);
     if (this.scrollTarget !== window) {
-      window.addEventListener('resize', this.boundUpdateMetrics);
+      window.removeEventListener('resize', this.boundUpdateMetrics);
     }
 
     /*
      Remove references, free up some memory
      */
     this.el = null;
-    this.boundUpdateMetrics = null;
   }
 
-  getChildren() {
-    return this._childrenToRender.map(child => {
-      return React.cloneElement(child, { style: this.getItemStyle(child.key) });
-    })
-  }
+  shouldComponentUpdate(nextProps, nextState) {
+    let shouldUpdate = true;
 
-  getItemStyle(key) {
-    const child = this.metrics.getItemByKey(key);
-
-    const style = {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      width: child[this.state.widthKey],
-      height: child[this.state.heightKey],
-      transform: `translateX(${child[this.state.leftKey]}px) translateY(${child[this.state.topKey]}px)`,
-    };
-
-    return style;
-  }
-
-  loadChildrenIntoMetrics(children, init = false) {
-    children = children || this.props.children;
-    console.warn('loadChildrenIntoMetrics - called');
-
-    const breadthKey = this.props.mode === 'horizontal' ? 'height' : 'width';
-    const depthKey = this.props.mode === 'horizontal' ? 'width' : 'height';
-
-    if (children !== null && this.state !== null) {
-      /* Only add children that don't already exist */
-      let childrenInMetrics = this.metrics.getItems().length;
-
-      children.every((child, i) => {
-        if (i < childrenInMetrics) {
-          /* Only compare for differences on init of props */
-          if (init) {
-            const item = this.metrics.getItem(i);
-            if (child.key === item.key
-              && child.props[breadthKey] === item.breadth
-              && child.props[depthKey] === item.depth) {
-              console.debug(`Item ${i} matches stored item`);
-              return true;
-            } else {
-              this.metrics.removeItems(i);
-              childrenInMetrics = i;
-            }
-          } else {
-            return true;
-          }
-        }
-
-        const item = this.metrics.addItem(child.key, child.props[breadthKey], child.props[depthKey]);
-        console.log('Added new child to metrics', item);
-
-        return item.depthStart < this.state.containerEnd;
-      });
-
-      console.debug('Updated metrics object', this.metrics);
+    if (this.state !== null) {
+      if (this.state.containerSize !== nextState.containerSize) {
+        shouldUpdate = true;
+      } else {
+        console.log('Comparing children', this.state.childrenToRender, nextState.childrenToRender);
+        shouldUpdate = !shallowCompare(this.state.childrenToRender, nextState.childrenToRender);
+      }
     }
+
+    return shouldUpdate;
   }
 
   updateMetrics(props) {
@@ -183,8 +121,6 @@ class InfinityGrid extends React.Component {
 
     const info = this.el.getBoundingClientRect();
 
-    console.log(info);
-
     const isHorizontal = props.mode === 'horizontal';
 
     let state = null;
@@ -192,7 +128,7 @@ class InfinityGrid extends React.Component {
     if (isHorizontal) {
       state = {
         isHorizontal: true,
-        containerSize: info.height,
+        containerSize: props.containerHeight || info.height,
         containerOffset: info.left,
         viewSize: window.innerWidth,
         widthKey: 'depth',
@@ -215,80 +151,204 @@ class InfinityGrid extends React.Component {
     state.containerStart = (state.containerOffset * -1) - this.props.tolerance;
     state.containerEnd = state.containerStart + state.viewSize + (this.props.tolerance * 2);
 
-    const stateChanged = this.state === null || Object.keys(state).some(key => this.state[key] !== state[key]);
+    /* Update view size if changed */
+    this.metrics.setViewBreadth(state.containerSize);
 
-    console.debug(`State changed?`, stateChanged, state);
+    /* Load any new children, or children that haven't yet been processed that could now be in view */
+    this.loadChildrenIntoMetrics(state, props.children, this.props !== props);
 
-    if (stateChanged) {
-      this.metrics.setViewBreadth(state.containerSize);
-      this.setState(state);
-    }
-  }
+    /* Estimate the container depth */
+    state.containerDepth = this.metrics.estimateContainerDepth(this.props.children.length);
 
-  convertDimensionToString(dimension, context) {
-    console.log(dimension, context);
-    if (typeof dimension === 'string') {
-      let regexMatch = null;
-      if ((regexMatch = dimension.match(/([0-9]+)%/)) !== null) {
-        console.warn('itemBreadth is percentage', regexMatch);
-        return (parseFloat(regexMatch[0]) / 100) * context;
-      } else {
-        console.log('itemBreadth is number');
-        return parseFloat(dimension);
+    /* Get the keys of children that should be in view */
+    const childrenToRender = [];
+    let exceeded = null;
+    this.metrics.getItems().every(item => {
+      if (item.depthEnd > state.containerStart) {
+        if (item.depthStart < state.containerEnd) {
+          childrenToRender.push(item.key);
+        } else {
+          if (exceeded = null) {
+            exceeded = item.breadthStart;
+          } else if (item.breadthStart <= exceeded) {
+            return false;
+          }
+        }
       }
-    } else if (dimension instanceof Function) {
-      return parseFloat(dimension(context));
+      return true;
+    });
+
+    state.childrenToRender = childrenToRender;
+
+    if (!this.endOfListCallbackFired && this.props.callback &&
+      state.childrenToRender[state.childrenToRender.length - 1] === this.props.children[this.props.children.length - 1].key) {
+      console.warn('Firing end of list callback');
+      this.endOfListCallbackFired = true;
+      setTimeout(this.props.callback, 0);
     }
-    /* Anything else, try and cast as float */
-    return parseFloat(dimension);
+
+    this.setState(state);
+
+    this.rafHandle = null;
   }
 
-  childrenToRender() {
-    if (this.state !== null) {
-      return this.props.children.filter((child, i) => {
-        const item = this.metrics.getItem(i);
-        return item && item.depthStart < this.state.containerEnd && item.depthEnd > this.state.containerStart;
-      })
+  loadChildrenWhenIdle() {
+    /* Still children left to do? */
+    const itemsInMetrics = this.metrics.getItems().length;
+    const numberOfChildren = this.props.children.length;
+
+    /* Number of items to process on each idle loop, keep low */
+    const itemsToProcess = 5;
+
+    if (itemsInMetrics < numberOfChildren) {
+      const containerSize = this.state.containerSize;
+      const breadthKey = this.state.isHorizontal ? this.props.heightKey : this.props.widthKey;
+      const depthKey = this.state.isHorizontal ? this.props.widthKey : this.props.heightKey;
+
+      if (containerSize) {
+        for (let i = itemsInMetrics; i < numberOfChildren && i < itemsInMetrics + itemsToProcess; i++) {
+          const child = this.props.children[i];
+
+          this.metrics.addItem(
+            child.key,
+            handleDimension(child.props[breadthKey], containerSize),
+            handleDimension(child.props[depthKey], containerSize)
+          );
+
+          this.childrenMap[child.key] = child;
+        }
+      }
+
+      this.idleHandle = requestIdleCallback(this.loadChildrenWhenIdle.bind(this));
     } else {
-      return [];
+      console.log('Children preloading complete', this.props.children, this.metrics);
+      this.idleHandle = null;
+
+      /* Update state if we have a more accurate document length now */
+      const containerDepth = this.metrics.estimateContainerDepth(numberOfChildren);
+      if (containerDepth !== this.state.containerDepth) {
+        console.debug(`Updating new container depth ${containerDepth}, instead of ${this.state.containerDepth}`);
+        this.setState(Object.assign({}, this.metrics, { containerDepth }));
+      }
     }
+  }
+
+  loadChildrenIntoMetrics(state, children, init = false) {
+    children = children || this.props.children;
+    console.warn('loadChildrenIntoMetrics - called');
+
+    const breadthKey = state.isHorizontal ? this.props.heightKey : this.props.widthKey;
+    const depthKey = state.isHorizontal ? this.props.widthKey : this.props.heightKey;
+
+    if (children !== null && state !== null) {
+      /* Only add children that don't already exist */
+      let childrenInMetrics = this.metrics.getItems().length;
+
+      children.every((child, i) => {
+        if (i < childrenInMetrics) {
+          /* Only compare for differences on init of props */
+          const item = this.metrics.getItem(i);
+          if (init || (this.state.containerSize !== state.containerSize && (child.props[breadthKey] instanceof Function || child.props[depthKey] instanceof Function))) {
+            if (child.key === item.key
+              && handleDimension(child.props[breadthKey], state.containerSize) === item.breadth
+              && handleDimension(child.props[depthKey], state.containerSize) === item.depth) {
+              console.debug(`Item ${i} matches stored item`);
+              return true;
+            } else {
+              this.metrics.removeItems(i).forEach(item => delete this.childrenMap[item.key]);
+              childrenInMetrics = i;
+            }
+          } else {
+            return true;
+          }
+        }
+
+        console.log(`Init new item ${child.key}`);
+        const item = this.metrics.addItem(
+          child.key,
+          handleDimension(child.props[breadthKey], state.containerSize),
+          handleDimension(child.props[depthKey], state.containerSize)
+        );
+
+        this.childrenMap[child.key] = child;
+
+        return item.depthStart < state.containerEnd;
+      });
+
+      console.debug('Updated metrics object', this.metrics);
+    }
+  }
+
+  getChildren() {
+    let children = [];
+
+    if (this.state !== null) {
+      children = this.state.childrenToRender.map(key => {
+        /*if (!this.childrenMap[key]) {
+          window.console.warn(`Couldn't find child ${key}`);
+        }
+        try {*/
+          return React.cloneElement(this.childrenMap[key], { style: this.getItemStyle(key) });
+        /*} catch (e) {
+          console.error('Error cloning child', e, this.childrenMap[key], key, this.childrenMap);
+        }*/
+      });
+    }
+
+    return children;
   }
 
   getWrapperStyle() {
     const style = { position: 'relative' };
 
-    const minDepth = this.metrics.estimateContainerDepth(this.props.children.length);
-
     if (this.state !== null) {
       if (this.state.isHorizontal) {
-        style.width = minDepth;
+        style.width = this.state.containerDepth;
         if (this.props.containerHeight) {
-          style.height = `${this.props.containerHeight}px`;
+          style.minHeight = `${this.props.containerHeight}px`;
         }
       } else {
-        style.height = minDepth;
+        style.minHeight = this.state.containerDepth;
       }
     }
 
     return style;
   }
 
+  getItemStyle(key) {
+    const child = this.metrics.getItemByKey(key);
+
+    const left = child[this.state.leftKey];
+    const top = child[this.state.topKey];
+
+    const style = {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: child[this.state.widthKey],
+      height: child[this.state.heightKey],
+      //transform: `translateX(${left}px) translateY(${top}px)`,
+      transform: `translate3d(${left}px, ${top}px, 0)`,
+    };
+
+    return style;
+  }
 
   render() {
-    console.debug('render', this);
+    console.warn('Render');
+
     const style = Object.assign(this.getWrapperStyle(), this.props.style);
+
     return (
       <div className={this.props.className} style={style}>
-      {this.getChildren()}
-  </div>
-  );
+        {this.getChildren()}
+      </div>
+    );
   }
 }
 
 InfinityGrid.propTypes = {
   mode: React.PropTypes.string,
-  itemWidth: React.PropTypes.any,
-  itemHeight: React.PropTypes.any,
   tolerance: React.PropTypes.number,
   children: React.PropTypes.array,
   scrollTarget: React.PropTypes.any,
@@ -297,11 +357,12 @@ InfinityGrid.propTypes = {
   style: React.PropTypes.object,
   heightKey: React.PropTypes.string,
   widthKey: React.PropTypes.string,
+  callback: React.PropTypes.func,
 };
 
 InfinityGrid.defaultProps = {
   mode: 'vertical',
-  tolerance: 200,
+  tolerance: 100,
   children: [],
   scrollTarget: window,
   className: 'infinity-grid',
@@ -332,6 +393,14 @@ function shallowCompare(one, two) {
     return keys.every(key => one[key] === two[key]);
   } else {
     return one.every((val, i) => val === two[i]);
+  }
+}
+
+function handleDimension (dimension, viewBreadth) {
+  if (dimension instanceof Function) {
+    return dimension(viewBreadth);
+  } else {
+    return dimension;
   }
 }
 

@@ -1,5 +1,5 @@
 'use strict';
 
-var InfinityGrid = require('./dist/InfinityGrid2');
+var InfinityGrid = require('./dist/InfinityGrid');
 
 module.exports = InfinityGrid;

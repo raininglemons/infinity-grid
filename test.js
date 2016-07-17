@@ -1,7 +1,8 @@
 import React from 'react';
 import { render } from 'react-dom';
 
-import InfinityGrid from './src/InfinityGrid2';
+import InfinityGrid from './src/InfinityGrid';
+import ThreadedImg from './src/ThreadedImg';
 
 function workerFn() {
   self.onmessage = function (e) {
@@ -123,7 +124,7 @@ function cb(renderedChildren) {
       left: 0,
     })}>*/
       <InfinityGrid
-        tolerance={500}
+        tolerance={400}
         callback={() => renderChildren(Math.ceil(children.length / 60))}
         /* scrollTarget='parent' */
         widthKey='itemWidth'
