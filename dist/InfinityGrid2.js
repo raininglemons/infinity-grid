@@ -45,8 +45,8 @@ var InfinityGrid = function (_React$Component) {
     _this.state = null;
     _this.metrics = new _Metrics2.default();
     _this.endOfListCallbackFired = false;
-
-    _this.mapChildrenByKey(props.children);
+    _this.childrenMap = {};
+    _this.nextItemDepthStart = 0;
     return _this;
   }
 
@@ -60,20 +60,9 @@ var InfinityGrid = function (_React$Component) {
       this.updateMetrics(nextProps);
     }
   }, {
-    key: 'mapChildrenByKey',
-    value: function mapChildrenByKey(children) {
-      var _this2 = this;
-
-      this.childrenMap = {};
-
-      children.forEach(function (child) {
-        return _this2.childrenMap[child.key] = child;
-      });
-    }
-  }, {
     key: 'componentDidMount',
     value: function componentDidMount() {
-      var _this3 = this;
+      var _this2 = this;
 
       console.debug('componentDidMount', this.props.children.length);
 
@@ -89,9 +78,9 @@ var InfinityGrid = function (_React$Component) {
       /*
        Add window scroll and resize listeners
        */
-      this.boundUpdateMetrics = function () {
-        return _this3.updateMetrics();
-      };
+      this.boundUpdateMetrics = /*() => requestAnimationFrame(*/function () {
+        return _this2.updateMetrics();
+      } /*)/* */;
       this.scrollTarget.addEventListener('scroll', this.boundUpdateMetrics);
       this.scrollTarget.addEventListener('resize', this.boundUpdateMetrics);
       if (this.scrollTarget !== window) {
@@ -148,6 +137,7 @@ var InfinityGrid = function (_React$Component) {
     value: function updateMetrics(props) {
       console.warn('updateMetrics - called');
       props = props || this.props;
+      //window.console.time('updateMetrics');
 
       var info = this.el.getBoundingClientRect();
 
@@ -188,6 +178,7 @@ var InfinityGrid = function (_React$Component) {
       this.loadChildrenIntoMetrics(state, props.children, this.props !== props);
 
       /* Get the keys of children that should be in view */
+      // const scrollDirectionIsDown = this.state.containerOffset < state.containerStart;
       var childrenToRender = [];
       var exceeded = null;
       this.metrics.getItems().every(function (item) {
@@ -213,37 +204,40 @@ var InfinityGrid = function (_React$Component) {
         setTimeout(this.props.callback, 0);
       }
 
-      this.setState(state);
+      //window.console.timeEnd('updateMetrics');
+      //window.console.time('setState');
+      /*requestAnimationFrame(() => */this.setState(state) /*)*/;
+      //window.console.timeEnd('setState');
     }
   }, {
     key: 'loadChildrenIntoMetrics',
     value: function loadChildrenIntoMetrics(state, children) {
-      var _this4 = this;
+      var _this3 = this;
 
       var init = arguments.length <= 2 || arguments[2] === undefined ? false : arguments[2];
 
       children = children || this.props.children;
       console.warn('loadChildrenIntoMetrics - called');
 
-      var breadthKey = state.isHorizontal ? 'height' : 'width';
-      var depthKey = state.isHorizontal ? 'width' : 'height';
+      var breadthKey = state.isHorizontal ? this.props.heightKey : this.props.widthKey;
+      var depthKey = state.isHorizontal ? this.props.widthKey : this.props.heightKey;
 
       if (children !== null && state !== null) {
         (function () {
           /* Only add children that don't already exist */
-          var childrenInMetrics = _this4.metrics.getItems().length;
+          var childrenInMetrics = _this3.metrics.getItems().length;
 
           children.every(function (child, i) {
             if (i < childrenInMetrics) {
               /* Only compare for differences on init of props */
-              var _item = _this4.metrics.getItem(i);
-              if (init || _this4.state.containerSize !== state.containerSize && (child.props[breadthKey] instanceof Function || child.props[depthKey] instanceof Function)) {
+              var _item = _this3.metrics.getItem(i);
+              if (init || _this3.state.containerSize !== state.containerSize && (child.props[breadthKey] instanceof Function || child.props[depthKey] instanceof Function)) {
                 if (child.key === _item.key && handleDimension(child.props[breadthKey], state.containerSize) === _item.breadth && handleDimension(child.props[depthKey], state.containerSize) === _item.depth) {
                   console.debug('Item ' + i + ' matches stored item');
                   return true;
                 } else {
-                  _this4.metrics.removeItems(i).forEach(function (item) {
-                    return delete _this4.childrenMap[item.key];
+                  _this3.metrics.removeItems(i).forEach(function (item) {
+                    return delete _this3.childrenMap[item.key];
                   });
                   childrenInMetrics = i;
                 }
@@ -252,27 +246,37 @@ var InfinityGrid = function (_React$Component) {
               }
             }
 
-            var item = _this4.metrics.addItem(child.key, handleDimension(child.props[breadthKey], state.containerSize), handleDimension(child.props[depthKey], state.containerSize));
-            _this4.childrenMap[child.key] = child;
-            console.log('Added new child to metrics', item);
+            console.log('Init new item ' + child.key);
+            var item = _this3.metrics.addItem(child.key, handleDimension(child.props[breadthKey], state.containerSize), handleDimension(child.props[depthKey], state.containerSize));
+
+            _this3.childrenMap[child.key] = child;
 
             return item.depthStart < state.containerEnd;
           });
 
-          console.debug('Updated metrics object', _this4.metrics);
+          console.debug('Updated metrics object', _this3.metrics);
         })();
       }
+
+      /* window.console.log(this.childrenMap); */
     }
   }, {
     key: 'getChildren',
     value: function getChildren() {
-      var _this5 = this;
+      var _this4 = this;
 
       var children = [];
 
       if (this.state !== null) {
         children = this.state.childrenToRender.map(function (key) {
-          return _react2.default.cloneElement(_this5.childrenMap[key], { style: _this5.getItemStyle(key) });
+          /*if (!this.childrenMap[key]) {
+            window.console.warn(`Couldn't find child ${key}`);
+          }
+          try {*/
+          return _react2.default.cloneElement(_this4.childrenMap[key], { style: _this4.getItemStyle(key) });
+          /*} catch (e) {
+            console.error('Error cloning child', e, this.childrenMap[key], key, this.childrenMap);
+          }*/
         });
       }
 
@@ -289,10 +293,10 @@ var InfinityGrid = function (_React$Component) {
         if (this.state.isHorizontal) {
           style.width = minDepth;
           if (this.props.containerHeight) {
-            style.height = this.props.containerHeight + 'px';
+            style.minHeight = this.props.containerHeight + 'px';
           }
         } else {
-          style.height = minDepth;
+          style.minHeight = minDepth;
         }
       }
 
@@ -312,7 +316,8 @@ var InfinityGrid = function (_React$Component) {
         left: 0,
         width: child[this.state.widthKey],
         height: child[this.state.heightKey],
-        transform: 'translateX(' + left + 'px) translateY(' + top + 'px)'
+        //transform: `translateX(${left}px) translateY(${top}px)`,
+        transform: 'translate3d(' + left + 'px, ' + top + 'px, 0)'
       };
 
       return style;
@@ -320,6 +325,7 @@ var InfinityGrid = function (_React$Component) {
   }, {
     key: 'render',
     value: function render() {
+      //window.console.warn('Render');
       console.warn('Rendering', this.state !== null ? this.state.childrenToRender : null);
 
       var style = Object.assign(this.getWrapperStyle(), this.props.style);

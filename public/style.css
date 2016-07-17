@@ -3,4 +3,57 @@
     border: solid #c0c0c0 2px;
     background: #cccccc;
 }
-html{-webkit-overflow-scrolling:touch}body{font-family:Helvetica,Arial,sans-serif;color:#333;-webkit-overflow-scrolling:touch}body p{font-weight:300;line-height:30px;vertical-align:baseline}.horizontal-infinite-scroll{width:100%;overflow:auto;-webkit-overflow-scrolling:touch}
+.infinity-grid {
+    transition: height .1s linear;
+}
+.infinity-grid > div {
+    box-sizing: border-box;
+    padding: 0.5%;
+}
+.infinity-grid figure {
+    display: block;
+    position: relative;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    position: absolute;
+    top: 1%;
+    left: 1%;
+    width: 98%;
+    height: 98%;
+}
+/*
+.infinity-grid figure:not(.loaded) {
+    background-image: url(loading.gif);
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+*/
+.infinity-grid figure h3 {
+    position: absolute;
+    bottom: 0%;
+    width: 100%;
+    margin: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    text-align: center;
+    color: white;
+    font-size: 1em;
+    padding: 5px;
+    box-sizing: border-box;
+    transition: transform .2s ease-in-out;
+    transform: translatey(0%);
+}
+
+.infinity-grid figure:hover h3 {
+    transform: translatey(100%);
+}
+
+html{
+    -webkit-overflow-scrolling:touch
+}
+body{
+    font-family:Helvetica,Arial,sans-serif;color:#333;
+    -webkit-overflow-scrolling:touch
+}
+body p{font-weight:300;line-height:30px;vertical-align:baseline}.horizontal-infinite-scroll{width:100%;overflow:auto;-webkit-overflow-scrolling:touch}

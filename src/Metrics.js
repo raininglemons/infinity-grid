@@ -112,7 +112,7 @@ class Metrics {
   }
 
   calculatePosition(item) {
-    // console.log(`Item #${this.getItems().length}:`);
+    //console.log(`Item #${this.getItems().length}:`);
 
     const itemConfigurations = this.getClosestBreadths(item.breadth)
       .reverse()
@@ -128,7 +128,7 @@ class Metrics {
         }
       });
 
-    // itemConfigurations.forEach(conf => console.log(' ', conf));
+    //itemConfigurations.forEach(conf => console.log(' ', conf));
 
     item.setBreadthOffset(itemConfigurations[0].breadthStart);
     item.setDepthOffset(itemConfigurations[0].depthStart);
@@ -168,7 +168,7 @@ class Metrics {
         }
       }
 
-      for (let ii = 0; ii < initialOffset; ii += breadth) {
+      for (let ii = 0; ii < this.state.viewBreadth; ii += breadth) {
         breadthOffset.push(ii);
       }
 
@@ -186,7 +186,7 @@ class Metrics {
           } else {
             // console.log(`  - yep #${predecessor.ref}`, predecessor.breadthStart + breadth <= this.state.viewBreadth);
             if (predecessor.breadthStart + breadth <= this.state.viewBreadth && breadthOffset.indexOf(predecessor.breadthStart) === -1) {
-              breadthOffset.push(predecessor.breadthStart);
+              breadthOffset.unshift(predecessor.breadthStart);
             }
           }
         }
@@ -208,6 +208,7 @@ class Metrics {
   getClosestDepth(breadthStart, breadthEnd) {
     let depthOffset = null;
     let i = this.state.itemDefinitions.length - 1;
+    let id = null;
 
     if (i > -1) {
       /*
@@ -299,62 +300,5 @@ class Metrics {
     this.state.itemsByDepthEnd = items.sort((a, b) => a.depthEnd - b.depthEnd);
   }
 }
-
-/*
-console.time('init');
-const test = new Metrics(300);
-
-let i = 0;
-
-test.addItem(i++, 200, 200);
-test.addItem(i++, 100, 100);
-
-test.addItem(i++, 100, 100);
-
-test.addItem(i++, 100, 100);
-test.addItem(i++, 100, 100);
-test.addItem(i++, 100, 100);
-
-test.addItem(i++, 100, 100);
-test.addItem(i++, 100, 100);
-test.addItem(i++, 100, 100);
-
-test.addItem(i++, 300, 20);
-
-console.log(test.getItemsByDepthEnd());
-
-/*
-for (; i < 1000;) { test.addItem(i++, 100, 100); }
-
-console.timeEnd('init');
-
-console.warn(`Estimated container depth: ${test.estimateContainerDepth(10)}`);
-console.log(`Container depth: ${test.state.lowestDepth}`);
-// console.log(test.getItems().map(item => [item.depthStart, item.breadthStart]));
-
-console.time('change view');
-test.setViewBreadth(200);
-console.timeEnd('change view');
-
-console.warn(`Estimated container depth: ${test.estimateContainerDepth(10)}`);
-console.log(`Container depth: ${test.state.lowestDepth}`);
-// console.log(test.getItems().map(item => [item.depthStart, item.breadthStart]));
-
-
-console.time('change view');
-test.setViewBreadth(100);
-console.timeEnd('change view');
-
-console.warn(`Estimated container depth: ${test.estimateContainerDepth(10)}`);
-console.log(`Container depth: ${test.state.lowestDepth}`);
-// console.log(test.getItems().map(item => [item.depthStart, item.breadthStart]));
-
-console.time('remove items');
-test.removeItems(6);
-console.timeEnd('remove items');
-
-console.log(`Container depth: ${test.state.lowestDepth} ${test.getItems().length}`);
-// console.log(test.getItems().map(item => [item.depthStart, item.breadthStart]));
-*/
 
 export default Metrics;
