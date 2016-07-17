@@ -65,8 +65,8 @@ var InfinityGrid = function (_React$Component) {
        If browser supports requestIdleCallback, continue to process remaining items
        in idle time
        */
-      if (window.requestIdleCallback) {
-        this.idleHandle = requestIdleCallback(this.loadChildrenWhenIdle.bind(this));
+      if (window.requestIdleCallback || window.setImmediate) {
+        this.idleHandle = (window.setImmediate ? setImmediate : requestIdleCallback)(this.loadChildrenWhenIdle.bind(this));
       }
     }
   }, {
@@ -243,13 +243,16 @@ var InfinityGrid = function (_React$Component) {
       var itemsInMetrics = this.metrics.getItems().length;
       var numberOfChildren = this.props.children.length;
 
+      /* If we're using IE's setIntermediate, instead cap iteration to 5 items */
+      var iterationsStillAllowed = 5;
+
       if (itemsInMetrics < numberOfChildren) {
         var containerSize = this.state.containerSize;
         var breadthKey = this.state.isHorizontal ? this.props.heightKey : this.props.widthKey;
         var depthKey = this.state.isHorizontal ? this.props.widthKey : this.props.heightKey;
 
         if (containerSize) {
-          for (var i = itemsInMetrics; i < numberOfChildren && deadline.timeRemaining() > 0; i++) {
+          for (var i = itemsInMetrics; i < numberOfChildren && (deadline && deadline.timeRemaining() > 0 || !deadline && iterationsStillAllowed-- > 0); i++) {
             var child = this.props.children[i];
 
             this.metrics.addItem(child.key, handleDimension(child.props[breadthKey], containerSize), handleDimension(child.props[depthKey], containerSize));
@@ -258,7 +261,7 @@ var InfinityGrid = function (_React$Component) {
           }
         }
 
-        this.idleHandle = requestIdleCallback(this.loadChildrenWhenIdle.bind(this));
+        this.idleHandle = (window.setImmediate ? setImmediate : requestIdleCallback)(this.loadChildrenWhenIdle.bind(this));
       } else {
         console.log('Children preloading complete', this.props.children, this.metrics);
         this.idleHandle = null;

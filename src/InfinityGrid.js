@@ -30,8 +30,8 @@ class InfinityGrid extends React.Component {
      If browser supports requestIdleCallback, continue to process remaining items
      in idle time
      */
-    if (window.requestIdleCallback) {
-      this.idleHandle = requestIdleCallback(this.loadChildrenWhenIdle.bind(this));
+    if (window.requestIdleCallback || window.setImmediate) {
+      this.idleHandle = (window.setImmediate ? setImmediate :requestIdleCallback)(this.loadChildrenWhenIdle.bind(this));
     }
   }
 
@@ -198,13 +198,19 @@ class InfinityGrid extends React.Component {
     const itemsInMetrics = this.metrics.getItems().length;
     const numberOfChildren = this.props.children.length;
 
+    /* If we're using IE's setIntermediate, instead cap iteration to 5 items */
+    let iterationsStillAllowed = 5;
+
     if (itemsInMetrics < numberOfChildren) {
       const containerSize = this.state.containerSize;
       const breadthKey = this.state.isHorizontal ? this.props.heightKey : this.props.widthKey;
       const depthKey = this.state.isHorizontal ? this.props.widthKey : this.props.heightKey;
 
       if (containerSize) {
-        for (let i = itemsInMetrics; i < numberOfChildren && deadline.timeRemaining() > 0; i++) {
+        for (let i = itemsInMetrics; i < numberOfChildren && (
+          (deadline && deadline.timeRemaining() > 0)
+          || (!deadline && iterationsStillAllowed-- > 0)
+        ); i++) {
           const child = this.props.children[i];
 
           this.metrics.addItem(
@@ -217,7 +223,7 @@ class InfinityGrid extends React.Component {
         }
       }
 
-      this.idleHandle = requestIdleCallback(this.loadChildrenWhenIdle.bind(this));
+      this.idleHandle = (window.setImmediate ? setImmediate :requestIdleCallback)(this.loadChildrenWhenIdle.bind(this));
     } else {
       console.log('Children preloading complete', this.props.children, this.metrics);
       this.idleHandle = null;

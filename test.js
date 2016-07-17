@@ -2,7 +2,7 @@ import React from 'react';
 import { render } from 'react-dom';
 
 import InfinityGrid from './src/InfinityGrid';
-import ThreadedImg from './src/ThreadedImg';
+// import ThreadedImg from './src/ThreadedImg';
 
 function workerFn() {
   self.onmessage = function (e) {
