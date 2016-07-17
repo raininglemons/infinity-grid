@@ -192,13 +192,11 @@ class InfinityGrid extends React.Component {
     this.rafHandle = null;
   }
 
-  loadChildrenWhenIdle() {
+  loadChildrenWhenIdle(deadline) {
+    console.warn('loadChildrenWhenIdle called');
     /* Still children left to do? */
     const itemsInMetrics = this.metrics.getItems().length;
     const numberOfChildren = this.props.children.length;
-
-    /* Number of items to process on each idle loop, keep low */
-    const itemsToProcess = 5;
 
     if (itemsInMetrics < numberOfChildren) {
       const containerSize = this.state.containerSize;
@@ -206,7 +204,7 @@ class InfinityGrid extends React.Component {
       const depthKey = this.state.isHorizontal ? this.props.widthKey : this.props.heightKey;
 
       if (containerSize) {
-        for (let i = itemsInMetrics; i < numberOfChildren && i < itemsInMetrics + itemsToProcess; i++) {
+        for (let i = itemsInMetrics; i < numberOfChildren && deadline.timeRemaining() > 0; i++) {
           const child = this.props.children[i];
 
           this.metrics.addItem(

@@ -237,13 +237,11 @@ var InfinityGrid = function (_React$Component) {
     }
   }, {
     key: 'loadChildrenWhenIdle',
-    value: function loadChildrenWhenIdle() {
+    value: function loadChildrenWhenIdle(deadline) {
+      console.warn('loadChildrenWhenIdle called');
       /* Still children left to do? */
       var itemsInMetrics = this.metrics.getItems().length;
       var numberOfChildren = this.props.children.length;
-
-      /* Number of items to process on each idle loop, keep low */
-      var itemsToProcess = 5;
 
       if (itemsInMetrics < numberOfChildren) {
         var containerSize = this.state.containerSize;
@@ -251,7 +249,7 @@ var InfinityGrid = function (_React$Component) {
         var depthKey = this.state.isHorizontal ? this.props.widthKey : this.props.heightKey;
 
         if (containerSize) {
-          for (var i = itemsInMetrics; i < numberOfChildren && i < itemsInMetrics + itemsToProcess; i++) {
+          for (var i = itemsInMetrics; i < numberOfChildren && deadline.timeRemaining() > 0; i++) {
             var child = this.props.children[i];
 
             this.metrics.addItem(child.key, handleDimension(child.props[breadthKey], containerSize), handleDimension(child.props[depthKey], containerSize));
