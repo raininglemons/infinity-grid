@@ -5,6 +5,8 @@ import Metrics from './Metrics';
 
 const console = consoleFactory('InfinityGrid', 0);
 
+const environment = typeof window !== 'undefined' ? 'browser' : 'server';
+
 class InfinityGrid extends React.Component {
   constructor(props, context) {
     console.warn('constructed');
@@ -30,13 +32,21 @@ class InfinityGrid extends React.Component {
      If browser supports requestIdleCallback, continue to process remaining items
      in idle time
      */
-    if (window.requestIdleCallback || window.setImmediate) {
+    if (environment === 'browser' && (window.requestIdleCallback || window.setImmediate)) {
       this.idleHandle = (window.setImmediate ? setImmediate :requestIdleCallback)(this.loadChildrenWhenIdle.bind(this));
     }
   }
 
   componentDidMount() {
     console.debug('componentDidMount', this.props.children.length);
+
+    /*
+    If we're running on a server, dont bind to anything, window doesn't exist ;)
+     */
+    if (environment === 'server') {
+      this.updateMetrics(this.props, true);
+      return;
+    }
 
     /*
      Find element we're rendering to, and pseudo-'window'
@@ -88,10 +98,12 @@ class InfinityGrid extends React.Component {
     /*
      Remove event listeners
      */
-    this.scrollTarget.removeEventListener('scroll', this.boundUpdateMetrics);
-    this.scrollTarget.removeEventListener('resize', this.boundUpdateMetrics);
-    if (this.scrollTarget !== window) {
-      window.removeEventListener('resize', this.boundUpdateMetrics);
+    if (environment === 'browser') {
+      this.scrollTarget.removeEventListener('scroll', this.boundUpdateMetrics);
+      this.scrollTarget.removeEventListener('resize', this.boundUpdateMetrics);
+      if (this.scrollTarget !== window) {
+        window.removeEventListener('resize', this.boundUpdateMetrics);
+      }
     }
 
     /*
@@ -119,7 +131,7 @@ class InfinityGrid extends React.Component {
     console.warn('updateMetrics - called');
     props = props || this.props;
 
-    const info = this.el.getBoundingClientRect();
+    const info = environment === 'server' ? {} : this.el.getBoundingClientRect();
 
     const isHorizontal = props.mode === 'horizontal';
 
@@ -129,8 +141,8 @@ class InfinityGrid extends React.Component {
       state = {
         isHorizontal: true,
         containerSize: props.containerHeight || info.height,
-        containerOffset: info.left,
-        viewSize: window.innerWidth,
+        containerOffset: info.left || 0,
+        viewSize: environment === 'server' ? props.viewSize : window.innerWidth,
         widthKey: 'depth',
         heightKey: 'breadth',
         leftKey: 'depthStart',
@@ -140,8 +152,8 @@ class InfinityGrid extends React.Component {
       state = {
         isHorizontal: false,
         containerSize: info.width,
-        containerOffset: info.top,
-        viewSize: window.innerHeight,
+        containerOffset: info.top || 0,
+        viewSize: environment === 'server' ? props.viewSize : window.innerHeight,
         widthKey: 'breadth',
         heightKey: 'depth',
         leftKey: 'breadthStart',
@@ -362,17 +374,19 @@ InfinityGrid.propTypes = {
   heightKey: React.PropTypes.string,
   widthKey: React.PropTypes.string,
   callback: React.PropTypes.func,
+  viewSize: React.PropTypes.number,
 };
 
 InfinityGrid.defaultProps = {
   mode: 'vertical',
   tolerance: 100,
   children: [],
-  scrollTarget: window,
+  scrollTarget: environment === 'browser' ? window : null,
   className: 'infinity-grid',
   style: {},
   heightKey: 'height',
   widthKey: 'width',
+  viewSize: 800,
 };
 
 function shallowCompare(one, two) {

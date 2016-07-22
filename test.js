@@ -1,14 +1,17 @@
 import React from 'react';
 import { render } from 'react-dom';
+import { renderToString } from 'react-dom/server';
+require('es6-promise').polyfill();
+require('isomorphic-fetch');
 
 import InfinityGrid from './src/InfinityGrid';
 // import ThreadedImg from './src/ThreadedImg';
 
-function workerFn() {
+/*function workerFn() {
   self.onmessage = function (e) {
     const url = e.data;
     const onload = () => {
-      self.postMessage(/*xhr.response*/true);
+      self.postMessage(true);
       self.close();
     };
 
@@ -32,6 +35,7 @@ function preload(url) {
   const worker = new Worker(workerUrl);
   worker.postMessage(url);
 }
+*/
 
 const headers = { 'Authorization': 'Client-ID 72040b1621ff486' };
 
@@ -114,15 +118,28 @@ let children = [];
 
 function cb(renderedChildren) {
   /* */
-  render(
-    /*<div style={({
-      width: '100%',
-      height: '100%',
-      overflow: 'auto',
-      position: 'absolute',
-      top: 0,
-      left: 0,
-    })}>*/
+  if (typeof window === 'undefined') {
+    /* SERVER */
+    console.log(renderToString(<InfinityGrid
+      tolerance={400}
+      callback={() => renderChildren(Math.ceil(children.length / 60))}
+      /* scrollTarget='parent' */
+      widthKey='itemWidth'
+      heightKey='itemHeight'
+    >
+      {renderedChildren}
+    </InfinityGrid>));
+  } else {
+    /* BROWSER */
+    render(
+      /*<div style={({
+       width: '100%',
+       height: '100%',
+       overflow: 'auto',
+       position: 'absolute',
+       top: 0,
+       left: 0,
+       })}>*/
       <InfinityGrid
         tolerance={400}
         callback={() => renderChildren(Math.ceil(children.length / 60))}
@@ -132,10 +149,11 @@ function cb(renderedChildren) {
       >
         {renderedChildren}
       </InfinityGrid>
-    /*</div>*/,
-    document.getElementById('app')
-  );
-  /* */
+      /*</div>*/,
+      document.getElementById('app')
+    );
+    /* */
+  }
 }
 
 renderChildren();
