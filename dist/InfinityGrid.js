@@ -32,9 +32,11 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 var console = (0, _consoleFactory2.default)('InfinityGrid', 0);
 
-console.debug = console.warn;
-
 var environment = typeof window !== 'undefined' ? 'browser' : 'server';
+
+if (environment === 'server') {
+  console.debug = console.warn;
+}
 
 var InfinityGrid = function (_React$Component) {
   _inherits(InfinityGrid, _React$Component);
@@ -179,8 +181,6 @@ var InfinityGrid = function (_React$Component) {
   }, {
     key: 'updateMetrics',
     value: function updateMetrics(props) {
-      var init = arguments.length <= 1 || arguments[1] === undefined ? false : arguments[1];
-
       console.warn('updateMetrics - called');
       props = props || this.props;
 
@@ -251,7 +251,7 @@ var InfinityGrid = function (_React$Component) {
         setTimeout(this.props.callback, 0);
       }
 
-      if (init) {
+      if (environment === 'server') {
         this.state = state;
       } else {
         this.setState(state);

@@ -5,11 +5,11 @@ import Metrics from './Metrics';
 
 const console = consoleFactory('InfinityGrid', 0);
 
+const environment = typeof window !== 'undefined' ? 'browser' : 'server';
+
 if (environment === 'server') {
   console.debug = console.warn;
 }
-
-const environment = typeof window !== 'undefined' ? 'browser' : 'server';
 
 class InfinityGrid extends React.Component {
   constructor(props, context) {
@@ -25,7 +25,7 @@ class InfinityGrid extends React.Component {
     this.idleHandle = null;
 
     if (environment === 'server') {
-      this.updateMetrics(props, true);
+      this.updateMetrics(props);
     }
   }
 
@@ -135,7 +135,7 @@ class InfinityGrid extends React.Component {
     return shouldUpdate;
   }
 
-  updateMetrics(props, init = false) {
+  updateMetrics(props) {
     console.warn('updateMetrics - called');
     props = props || this.props;
 
@@ -207,7 +207,7 @@ class InfinityGrid extends React.Component {
       setTimeout(this.props.callback, 0);
     }
 
-    if (init) {
+    if (environment === 'server') {
       this.state = state;
     } else {
       this.setState(state);
