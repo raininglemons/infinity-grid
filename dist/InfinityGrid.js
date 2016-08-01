@@ -32,6 +32,10 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 var console = (0, _consoleFactory2.default)('InfinityGrid', 0);
 
+console.debug = console.warn;
+
+var environment = typeof window !== 'undefined' ? 'browser' : 'server';
+
 var InfinityGrid = function (_React$Component) {
   _inherits(InfinityGrid, _React$Component);
 
@@ -49,6 +53,10 @@ var InfinityGrid = function (_React$Component) {
 
     _this.rafHandle = null;
     _this.idleHandle = null;
+
+    if (environment === 'server') {
+      _this.updateMetrics(props, true);
+    }
     return _this;
   }
 
@@ -65,7 +73,7 @@ var InfinityGrid = function (_React$Component) {
        If browser supports requestIdleCallback, continue to process remaining items
        in idle time
        */
-      if (window.requestIdleCallback || window.setImmediate) {
+      if (environment === 'browser' && (window.requestIdleCallback || window.setImmediate)) {
         this.idleHandle = (window.setImmediate ? setImmediate : requestIdleCallback)(this.loadChildrenWhenIdle.bind(this));
       }
     }
@@ -75,6 +83,14 @@ var InfinityGrid = function (_React$Component) {
       var _this2 = this;
 
       console.debug('componentDidMount', this.props.children.length);
+
+      /*
+      If we're running on a server, dont bind to anything, window doesn't exist ;)
+       */
+      if (environment === 'server') {
+        this.updateMetrics(this.props, true);
+        return;
+      }
 
       /*
        Find element we're rendering to, and pseudo-'window'
@@ -131,10 +147,12 @@ var InfinityGrid = function (_React$Component) {
       /*
        Remove event listeners
        */
-      this.scrollTarget.removeEventListener('scroll', this.boundUpdateMetrics);
-      this.scrollTarget.removeEventListener('resize', this.boundUpdateMetrics);
-      if (this.scrollTarget !== window) {
-        window.removeEventListener('resize', this.boundUpdateMetrics);
+      if (environment === 'browser') {
+        this.scrollTarget.removeEventListener('scroll', this.boundUpdateMetrics);
+        this.scrollTarget.removeEventListener('resize', this.boundUpdateMetrics);
+        if (this.scrollTarget !== window) {
+          window.removeEventListener('resize', this.boundUpdateMetrics);
+        }
       }
 
       /*
@@ -161,10 +179,12 @@ var InfinityGrid = function (_React$Component) {
   }, {
     key: 'updateMetrics',
     value: function updateMetrics(props) {
+      var init = arguments.length <= 1 || arguments[1] === undefined ? false : arguments[1];
+
       console.warn('updateMetrics - called');
       props = props || this.props;
 
-      var info = this.el.getBoundingClientRect();
+      var info = environment === 'server' ? {} : this.el.getBoundingClientRect();
 
       var isHorizontal = props.mode === 'horizontal';
 
@@ -173,9 +193,9 @@ var InfinityGrid = function (_React$Component) {
       if (isHorizontal) {
         state = {
           isHorizontal: true,
-          containerSize: props.containerHeight || info.height,
-          containerOffset: info.left,
-          viewSize: window.innerWidth,
+          containerSize: environment === 'server' ? props.serverViewHeight || props.containerHeight : props.containerHeight || info.height,
+          containerOffset: info.left || 0,
+          viewSize: environment === 'server' ? props.serverViewWidth : window.innerWidth,
           widthKey: 'depth',
           heightKey: 'breadth',
           leftKey: 'depthStart',
@@ -184,9 +204,9 @@ var InfinityGrid = function (_React$Component) {
       } else {
         state = {
           isHorizontal: false,
-          containerSize: info.width,
-          containerOffset: info.top,
-          viewSize: window.innerHeight,
+          containerSize: environment === 'server' ? props.serverViewWidth : info.width,
+          containerOffset: info.top || 0,
+          viewSize: environment === 'server' ? props.serverViewHeight : window.innerHeight,
           widthKey: 'breadth',
           heightKey: 'depth',
           leftKey: 'breadthStart',
@@ -225,13 +245,17 @@ var InfinityGrid = function (_React$Component) {
 
       state.childrenToRender = childrenToRender;
 
-      if (!this.endOfListCallbackFired && this.props.callback && state.childrenToRender[state.childrenToRender.length - 1] === this.props.children[this.props.children.length - 1].key) {
+      if (environment !== 'server' && !this.endOfListCallbackFired && this.props.callback && state.childrenToRender[state.childrenToRender.length - 1] === this.props.children[this.props.children.length - 1].key) {
         console.warn('Firing end of list callback');
         this.endOfListCallbackFired = true;
         setTimeout(this.props.callback, 0);
       }
 
-      this.setState(state);
+      if (init) {
+        this.state = state;
+      } else {
+        this.setState(state);
+      }
 
       this.rafHandle = null;
     }
@@ -390,6 +414,8 @@ var InfinityGrid = function (_React$Component) {
 
       var style = Object.assign(this.getWrapperStyle(), this.props.style);
 
+      console.log(this.getChildren());
+
       return _react2.default.createElement(
         'div',
         { className: this.props.className, style: style },
@@ -411,18 +437,22 @@ InfinityGrid.propTypes = {
   style: _react2.default.PropTypes.object,
   heightKey: _react2.default.PropTypes.string,
   widthKey: _react2.default.PropTypes.string,
-  callback: _react2.default.PropTypes.func
+  callback: _react2.default.PropTypes.func,
+  serverViewWidth: _react2.default.PropTypes.number,
+  serverViewHeight: _react2.default.PropTypes.number
 };
 
 InfinityGrid.defaultProps = {
   mode: 'vertical',
   tolerance: 100,
   children: [],
-  scrollTarget: window,
+  scrollTarget: environment === 'browser' ? window : null,
   className: 'infinity-grid',
   style: {},
   heightKey: 'height',
-  widthKey: 'width'
+  widthKey: 'width',
+  serverViewWidth: 800,
+  serverViewHeight: 800
 };
 
 function shallowCompare(one, two) {

@@ -4,38 +4,7 @@ import { renderToString } from 'react-dom/server';
 require('es6-promise').polyfill();
 require('isomorphic-fetch');
 
-import InfinityGrid from './src/InfinityGrid';
-// import ThreadedImg from './src/ThreadedImg';
-
-/*function workerFn() {
-  self.onmessage = function (e) {
-    const url = e.data;
-    const onload = () => {
-      self.postMessage(true);
-      self.close();
-    };
-
-    const xhr = new XMLHttpRequest();
-    xhr.responseType = 'blob';
-    xhr.onload = xhr.onerror = onload;
-    xhr.open('GET', url, true);
-    xhr.send();
-  };
-}
-
-const URL = window.URL || window.webkitURL;
-let workerSrc = workerFn.toString();
-workerSrc = workerSrc.substr(workerSrc.indexOf('{') + 1);
-workerSrc = workerSrc.substr(0, workerSrc.lastIndexOf('}'));
-//console.log(workerSrc);
-
-const workerUrl = URL.createObjectURL(new Blob([workerSrc], { type: "text/javascript" }));
-
-function preload(url) {
-  const worker = new Worker(workerUrl);
-  worker.postMessage(url);
-}
-*/
+import InfinityGrid from './InfinityGrid';
 
 const headers = { 'Authorization': 'Client-ID 72040b1621ff486' };
 
@@ -97,7 +66,8 @@ function renderChildren(iOffset = 0) {
             </figure>
           </div>;
         })
-    ));
+    ))
+    .catch(e => console.error(e));
 }
 
 function getThumbnailSuffix(ratio) {

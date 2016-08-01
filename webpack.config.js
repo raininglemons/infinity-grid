@@ -3,7 +3,7 @@ const webpack = require('webpack');
 console.warn(`Building in ${process.env.NODE_ENV || 'development'} mode`);
 
 module.exports = {
-  entry: ['whatwg-fetch', './test.js'],
+  entry: ['./src/test.js'],
 
   output: {
     path: 'public',

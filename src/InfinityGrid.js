@@ -5,6 +5,10 @@ import Metrics from './Metrics';
 
 const console = consoleFactory('InfinityGrid', 0);
 
+if (environment === 'server') {
+  console.debug = console.warn;
+}
+
 const environment = typeof window !== 'undefined' ? 'browser' : 'server';
 
 class InfinityGrid extends React.Component {
@@ -19,6 +23,10 @@ class InfinityGrid extends React.Component {
 
     this.rafHandle = null;
     this.idleHandle = null;
+
+    if (environment === 'server') {
+      this.updateMetrics(props, true);
+    }
   }
 
   componentWillReceiveProps(nextProps) {
@@ -127,7 +135,7 @@ class InfinityGrid extends React.Component {
     return shouldUpdate;
   }
 
-  updateMetrics(props) {
+  updateMetrics(props, init = false) {
     console.warn('updateMetrics - called');
     props = props || this.props;
 
@@ -140,9 +148,9 @@ class InfinityGrid extends React.Component {
     if (isHorizontal) {
       state = {
         isHorizontal: true,
-        containerSize: props.containerHeight || info.height,
+        containerSize: environment === 'server' ? props.serverViewHeight || props.containerHeight : props.containerHeight || info.height,
         containerOffset: info.left || 0,
-        viewSize: environment === 'server' ? props.viewSize : window.innerWidth,
+        viewSize: environment === 'server' ? props.serverViewWidth : window.innerWidth,
         widthKey: 'depth',
         heightKey: 'breadth',
         leftKey: 'depthStart',
@@ -151,9 +159,9 @@ class InfinityGrid extends React.Component {
     } else {
       state = {
         isHorizontal: false,
-        containerSize: info.width,
+        containerSize: environment === 'server' ? props.serverViewWidth : info.width,
         containerOffset: info.top || 0,
-        viewSize: environment === 'server' ? props.viewSize : window.innerHeight,
+        viewSize: environment === 'server' ? props.serverViewHeight : window.innerHeight,
         widthKey: 'breadth',
         heightKey: 'depth',
         leftKey: 'breadthStart',
@@ -192,14 +200,18 @@ class InfinityGrid extends React.Component {
 
     state.childrenToRender = childrenToRender;
 
-    if (!this.endOfListCallbackFired && this.props.callback &&
+    if (environment !== 'server' && !this.endOfListCallbackFired && this.props.callback &&
       state.childrenToRender[state.childrenToRender.length - 1] === this.props.children[this.props.children.length - 1].key) {
       console.warn('Firing end of list callback');
       this.endOfListCallbackFired = true;
       setTimeout(this.props.callback, 0);
     }
 
-    this.setState(state);
+    if (init) {
+      this.state = state;
+    } else {
+      this.setState(state);
+    }
 
     this.rafHandle = null;
   }
@@ -355,6 +367,8 @@ class InfinityGrid extends React.Component {
 
     const style = Object.assign(this.getWrapperStyle(), this.props.style);
 
+    console.log(this.getChildren());
+
     return (
       <div className={this.props.className} style={style}>
         {this.getChildren()}
@@ -374,7 +388,8 @@ InfinityGrid.propTypes = {
   heightKey: React.PropTypes.string,
   widthKey: React.PropTypes.string,
   callback: React.PropTypes.func,
-  viewSize: React.PropTypes.number,
+  serverViewWidth: React.PropTypes.number,
+  serverViewHeight: React.PropTypes.number,
 };
 
 InfinityGrid.defaultProps = {
@@ -386,7 +401,8 @@ InfinityGrid.defaultProps = {
   style: {},
   heightKey: 'height',
   widthKey: 'width',
-  viewSize: 800,
+  serverViewWidth: 800,
+  serverViewHeight: 800,
 };
 
 function shallowCompare(one, two) {
