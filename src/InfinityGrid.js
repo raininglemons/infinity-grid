@@ -268,6 +268,11 @@ class InfinityGrid extends React.Component {
     const breadthKey = state.isHorizontal ? this.props.heightKey : this.props.widthKey;
     const depthKey = state.isHorizontal ? this.props.widthKey : this.props.heightKey;
 
+    /* Remove any children we dont need in metrics now */
+    if (children && this.metrics.getItems().length > children.length) {
+      this.metrics.removeItems(children.length);
+    }
+
     if (children !== null && state !== null) {
       /* Only add children that don't already exist */
       let childrenInMetrics = this.metrics.getItems().length;

@@ -57,7 +57,7 @@ var InfinityGrid = function (_React$Component) {
     _this.idleHandle = null;
 
     if (environment === 'server') {
-      _this.updateMetrics(props, true);
+      _this.updateMetrics(props);
     }
     return _this;
   }
@@ -310,6 +310,11 @@ var InfinityGrid = function (_React$Component) {
 
       var breadthKey = state.isHorizontal ? this.props.heightKey : this.props.widthKey;
       var depthKey = state.isHorizontal ? this.props.widthKey : this.props.heightKey;
+
+      /* Remove any children we dont need in metrics now */
+      if (children && this.metrics.getItems().length > children.length) {
+        this.metrics.removeItems(children.length);
+      }
 
       if (children !== null && state !== null) {
         (function () {
