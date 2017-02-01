@@ -125,6 +125,8 @@ class InfinityGrid extends React.Component {
 
     if (this.state !== null) {
       if (this.state.containerSize !== nextState.containerSize) {
+          shouldUpdate = true;
+      } else if (this.props.forceUpdateOn !== nextProps.forceUpdateOn) {
         shouldUpdate = true;
       } else {
         console.log('Comparing children', this.state.childrenToRender, nextState.childrenToRender);
@@ -395,6 +397,7 @@ InfinityGrid.propTypes = {
   callback: React.PropTypes.func,
   serverViewWidth: React.PropTypes.number,
   serverViewHeight: React.PropTypes.number,
+  forceUpdateOn: React.PropTypes.any
 };
 
 InfinityGrid.defaultProps = {
