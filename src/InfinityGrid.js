@@ -123,13 +123,11 @@ class InfinityGrid extends React.Component {
   shouldComponentUpdate(nextProps, nextState) {
     let shouldUpdate = true;
 
-    if (this.props.forceUpdateOn && this.props.forceUpdateOn !== nextProps.forceUpdateOn) {
-      return true;
-    }
-
     if (this.state !== null) {
       if (this.state.containerSize !== nextState.containerSize) {
           shouldUpdate = true;
+      } else if (this.props.forceUpdateOn !== nextProps.forceUpdateOn) {
+        shouldUpdate = true;
       } else {
         console.log('Comparing children', this.state.childrenToRender, nextState.childrenToRender);
         shouldUpdate = !shallowCompare(this.state.childrenToRender, nextState.childrenToRender);
