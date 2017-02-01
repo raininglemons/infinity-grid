@@ -130,6 +130,8 @@ class InfinityGrid extends React.Component {
     if (this.state !== null) {
       if (this.state.containerSize !== nextState.containerSize) {
           shouldUpdate = true;
+      } else if (this.forceUpdateFlag) {
+          shouldUpdate = true;
       } else {
         console.log('Comparing children', this.state.childrenToRender, nextState.childrenToRender);
         shouldUpdate = !shallowCompare(this.state.childrenToRender, nextState.childrenToRender);
