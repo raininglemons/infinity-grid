@@ -21,6 +21,8 @@ class InfinityGrid extends React.Component {
     this.endOfListCallbackFired = false;
     this.childrenMap = {};
 
+    this.forceUpdateFlag = false;
+
     this.rafHandle = null;
     this.idleHandle = null;
 
@@ -33,6 +35,8 @@ class InfinityGrid extends React.Component {
     console.warn('nextProps', nextProps);
 
     this.endOfListCallbackFired = false;
+
+    this.forceUpdateFlag = this.props.forceUpdateOn !== nextProps.forceUpdateOn;
 
     this.updateMetrics(nextProps);
 
@@ -126,8 +130,6 @@ class InfinityGrid extends React.Component {
     if (this.state !== null) {
       if (this.state.containerSize !== nextState.containerSize) {
           shouldUpdate = true;
-      } else if (this.props.forceUpdateOn !== nextProps.forceUpdateOn) {
-        shouldUpdate = true;
       } else {
         console.log('Comparing children', this.state.childrenToRender, nextState.childrenToRender);
         shouldUpdate = !shallowCompare(this.state.childrenToRender, nextState.childrenToRender);
@@ -318,16 +320,23 @@ class InfinityGrid extends React.Component {
     let children = [];
 
     if (this.state !== null) {
-      children = this.state.childrenToRender.map(key => {
-        /*if (!this.childrenMap[key]) {
-          window.console.warn(`Couldn't find child ${key}`);
-        }
-        try {*/
-          return React.cloneElement(this.childrenMap[key], { style: this.getItemStyle(key) });
-        /*} catch (e) {
-          console.error('Error cloning child', e, this.childrenMap[key], key, this.childrenMap);
-        }*/
-      });
+      if (this.forceUpdateFlag) {
+        this.state.childrenToRender.forEach((key, i) => {
+          children.push(React.cloneElement(this.props.children[i], { style: this.getItemStyle(key) }));
+        });
+      } else {
+          children = this.state.childrenToRender.map(key => {
+            /*if (!this.childrenMap[key]) {
+             window.console.warn(`Couldn't find child ${key}`);
+             }
+             try {*/
+              return React.cloneElement(this.childrenMap[key], { style: this.getItemStyle(key) });
+            /*} catch (e) {
+             console.error('Error cloning child', e, this.childrenMap[key], key, this.childrenMap);
+             }*/
+          });
+      }
+
     }
 
     return children;

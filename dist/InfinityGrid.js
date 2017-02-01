@@ -53,6 +53,8 @@ var InfinityGrid = function (_React$Component) {
     _this.endOfListCallbackFired = false;
     _this.childrenMap = {};
 
+    _this.forceUpdateFlag = false;
+
     _this.rafHandle = null;
     _this.idleHandle = null;
 
@@ -68,6 +70,8 @@ var InfinityGrid = function (_React$Component) {
       console.warn('nextProps', nextProps);
 
       this.endOfListCallbackFired = false;
+
+      this.forceUpdateFlag = this.props.forceUpdateOn !== nextProps.forceUpdateOn;
 
       this.updateMetrics(nextProps);
 
@@ -169,8 +173,6 @@ var InfinityGrid = function (_React$Component) {
 
       if (this.state !== null) {
         if (this.state.containerSize !== nextState.containerSize) {
-          shouldUpdate = true;
-        } else if (this.props.forceUpdateOn !== nextProps.forceUpdateOn) {
           shouldUpdate = true;
         } else {
           console.log('Comparing children', this.state.childrenToRender, nextState.childrenToRender);
@@ -362,16 +364,22 @@ var InfinityGrid = function (_React$Component) {
       var children = [];
 
       if (this.state !== null) {
-        children = this.state.childrenToRender.map(function (key) {
-          /*if (!this.childrenMap[key]) {
-            window.console.warn(`Couldn't find child ${key}`);
-          }
-          try {*/
-          return _react2.default.cloneElement(_this4.childrenMap[key], { style: _this4.getItemStyle(key) });
-          /*} catch (e) {
-            console.error('Error cloning child', e, this.childrenMap[key], key, this.childrenMap);
-          }*/
-        });
+        if (this.forceUpdateFlag) {
+          this.state.childrenToRender.forEach(function (key, i) {
+            children.push(_react2.default.cloneElement(_this4.props.children[i], { style: _this4.getItemStyle(key) }));
+          });
+        } else {
+          children = this.state.childrenToRender.map(function (key) {
+            /*if (!this.childrenMap[key]) {
+             window.console.warn(`Couldn't find child ${key}`);
+             }
+             try {*/
+            return _react2.default.cloneElement(_this4.childrenMap[key], { style: _this4.getItemStyle(key) });
+            /*} catch (e) {
+             console.error('Error cloning child', e, this.childrenMap[key], key, this.childrenMap);
+             }*/
+          });
+        }
       }
 
       return children;
