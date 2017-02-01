@@ -46,7 +46,7 @@ var InfinityGrid = function (_React$Component) {
 
     console.warn('constructed');
 
-    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(InfinityGrid).call(this, props, context));
+    var _this = _possibleConstructorReturn(this, (InfinityGrid.__proto__ || Object.getPrototypeOf(InfinityGrid)).call(this, props, context));
 
     _this.state = null;
     _this.metrics = new _Metrics2.default();
@@ -169,6 +169,8 @@ var InfinityGrid = function (_React$Component) {
 
       if (this.state !== null) {
         if (this.state.containerSize !== nextState.containerSize) {
+          shouldUpdate = true;
+        } else if (this.props.forceUpdateOn !== nextProps.forceUpdateOn) {
           shouldUpdate = true;
         } else {
           console.log('Comparing children', this.state.childrenToRender, nextState.childrenToRender);
@@ -303,7 +305,7 @@ var InfinityGrid = function (_React$Component) {
     value: function loadChildrenIntoMetrics(state, children) {
       var _this3 = this;
 
-      var init = arguments.length <= 2 || arguments[2] === undefined ? false : arguments[2];
+      var init = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
 
       children = children || this.props.children;
       console.warn('loadChildrenIntoMetrics - called');
@@ -444,7 +446,8 @@ InfinityGrid.propTypes = {
   widthKey: _react2.default.PropTypes.string,
   callback: _react2.default.PropTypes.func,
   serverViewWidth: _react2.default.PropTypes.number,
-  serverViewHeight: _react2.default.PropTypes.number
+  serverViewHeight: _react2.default.PropTypes.number,
+  forceUpdateOn: _react2.default.PropTypes.any
 };
 
 InfinityGrid.defaultProps = {
